@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photosynthesis - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:radial-gradient(ellipse,#001a00,#000a00); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { border-radius:20px; box-shadow:0 0 80px rgba(100,255,100,0.3); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d');
+cv.width=900; cv.height=680;
+const W=900,H=680;
+let t=0;
+
+// Photon (light particle)
+class Photon {
+  constructor(){ this.reset(); }
+  reset(){ this.x=820+Math.random()*40; this.y=50+Math.random()*50; this.tx=350+Math.random()*100; this.ty=200+Math.random()*150; this.progress=0; this.speed=0.005+Math.random()*0.004; this.r=2+Math.random()*2; this.hue=40+Math.random()*30; this.life=1; }
+  update(){ this.progress+=this.speed; if(this.progress>=1){ this.life-=0.05; } }
+  getPos(){ return {x:this.x+(this.tx-this.x)*Math.min(1,this.progress*1.2), y:this.y+(this.ty-this.y)*Math.min(1,this.progress*1.2)}; }
+  draw(){
+    if(this.life<=0) return;
+    let p=this.getPos();
+    ctx.save(); ctx.globalAlpha=this.life*0.9;
+    ctx.shadowColor=`hsl(${this.hue},100%,70%)`; ctx.shadowBlur=12;
+    ctx.fillStyle=`hsl(${this.hue},100%,70%)`;
+    ctx.beginPath(); ctx.arc(p.x,p.y,this.r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Bubble (O2)
+class Bubble {
+  constructor(){ this.reset(); }
+  reset(){ this.x=330+Math.random()*80; this.y=250+Math.random()*100; this.vx=(Math.random()-0.5)*0.5; this.vy=-(0.5+Math.random()*0.8); this.r=4+Math.random()*5; this.life=1; this.decay=0.006+Math.random()*0.004; }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.life-=this.decay; }
+  draw(){ if(this.life<=0) return; ctx.save(); ctx.globalAlpha=this.life*0.8; ctx.strokeStyle='rgba(100,255,150,0.9)'; ctx.lineWidth=1.5; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=8; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.stroke(); ctx.fillStyle='rgba(150,255,180,0.15)'; ctx.fill(); ctx.font='bold 10px serif'; ctx.textAlign='center'; ctx.shadowBlur=0; ctx.fillStyle='#a5f5c0'; ctx.fillText('O₂',this.x,this.y+4); ctx.restore(); }
+}
+
+// Water drop
+class WaterDrop {
+  constructor(){ this.reset(); }
+  reset(){ this.x=440+Math.random()*10-5; this.y=620+Math.random()*10; this.vy=-(1+Math.random()*0.5); this.life=1; this.r=4+Math.random()*3; }
+  update(){ this.y+=this.vy; this.life-=0.008; }
+  draw(){ if(this.life<=0) return; ctx.save(); ctx.globalAlpha=this.life*0.85; ctx.fillStyle='#29b6f6'; ctx.shadowColor='#29b6f6'; ctx.shadowBlur=10; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+let photons=[], bubbles=[], waterDrops=[];
+function spawnPhotons(){ if(photons.filter(p=>p.life>0).length<25){ let ph=new Photon(); photons.push(ph); } }
+function spawnBubbles(){ if(Math.random()<0.08){ bubbles.push(new Bubble()); } }
+function spawnWater(){ if(Math.random()<0.05){ waterDrops.push(new WaterDrop()); } }
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H*0.4,0,W/2,H/2,520);
+  g.addColorStop(0,'#002800'); g.addColorStop(0.5,'#001200'); g.addColorStop(1,'#000800');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+function drawSun(pulse){
+  let sx=840,sy=80;
+  // Rays
+  for(let i=0;i<12;i++){
+    let angle=i/12*Math.PI*2+t*0.3;
+    let len=40+Math.sin(t*2+i)*8;
+    ctx.save(); ctx.strokeStyle=`rgba(255,210,0,${0.3+Math.sin(t*2+i)*0.1})`; ctx.lineWidth=2+Math.sin(t+i)*0.5;
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=15;
+    ctx.beginPath(); ctx.moveTo(sx+Math.cos(angle)*32,sy+Math.sin(angle)*32); ctx.lineTo(sx+Math.cos(angle)*(32+len),sy+Math.sin(angle)*(32+len)); ctx.stroke(); ctx.restore();
+  }
+  // Sun disc
+  let g=ctx.createRadialGradient(sx-8,sy-8,4,sx,sy,40);
+  g.addColorStop(0,'#fff176'); g.addColorStop(0.4,'#ffeb3b'); g.addColorStop(1,'#f57f17');
+  ctx.save(); ctx.fillStyle=g; ctx.shadowColor='#ffd700'; ctx.shadowBlur=40+pulse*15;
+  ctx.beginPath(); ctx.arc(sx,sy,35,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(sx-10,sy-10,12,8,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawTree(pulse){
+  // Trunk
+  ctx.save();
+  let tg=ctx.createLinearGradient(410,400,460,650);
+  tg.addColorStop(0,'#5d4037'); tg.addColorStop(1,'#3e2723');
+  ctx.fillStyle=tg; ctx.shadowColor='#5d4037'; ctx.shadowBlur=8;
+  ctx.fillRect(415,380,22,260);
+  // Roots
+  ctx.strokeStyle='#4e342e'; ctx.lineWidth=6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(426,620); ctx.quadraticCurveTo(390,640,350,645); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(426,620); ctx.quadraticCurveTo(460,640,500,648); ctx.stroke();
+  ctx.restore();
+  // Leaf clusters - 3D looking
+  const leaves=[
+    {x:425,y:300,rx:90,ry:110,color:'#2e7d32',h:'#43a047',s:'#1b5e20'},{x:360,y:250,rx:70,ry:90,color:'#388e3c',h:'#4caf50',s:'#2e7d32'},
+    {x:490,y:240,rx:75,ry:85,color:'#33691e',h:'#558b2f',s:'#1b5e20'},{x:430,y:190,rx:80,ry:75,color:'#1b5e20',h:'#2e7d32',s:'#0a3300'},
+  ];
+  leaves.forEach(l=>{
+    let g=ctx.createRadialGradient(l.x-l.rx*0.3,l.y-l.ry*0.3,5,l.x,l.y,Math.max(l.rx,l.ry));
+    g.addColorStop(0,l.h); g.addColorStop(0.5,l.color); g.addColorStop(1,l.s);
+    ctx.save(); ctx.shadowColor='#4caf50'; ctx.shadowBlur=15+pulse*8;
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(l.x,l.y,l.rx,l.ry,0,0,Math.PI*2); ctx.fill();
+    // Highlight
+    ctx.fillStyle='rgba(200,255,180,0.18)'; ctx.beginPath(); ctx.ellipse(l.x-l.rx*0.3,l.y-l.ry*0.3,l.rx*0.3,l.ry*0.2,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawRoot(sy){
+  // Soil
+  ctx.save();
+  let soil=ctx.createLinearGradient(0,550,0,H);
+  soil.addColorStop(0,'#3e2723'); soil.addColorStop(1,'#1a0a00');
+  ctx.fillStyle=soil; ctx.beginPath(); ctx.roundRect(0,580,W,H,0); ctx.fill();
+  // Root lines
+  ctx.strokeStyle='#6d4c41'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(426,615); ctx.quadraticCurveTo(400,645,370,665); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(426,615); ctx.quadraticCurveTo(450,645,480,665); ctx.stroke();
+  ctx.restore();
+}
+
+function drawArrows(pulse){
+  // Light arrows from sun to leaf
+  ctx.save(); ctx.strokeStyle=`rgba(255,220,50,${0.5+pulse*0.3})`; ctx.lineWidth=3; ctx.setLineDash([10,8]); ctx.lineDashOffset=-t*30;
+  ctx.shadowColor='#ffd700'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.moveTo(800,100); ctx.quadraticCurveTo(620,120,450,250); ctx.stroke();
+  ctx.setLineDash([]);
+  // CO2 arrow (into leaf)
+  ctx.strokeStyle='rgba(200,220,255,0.5)'; ctx.lineWidth=2.5; ctx.setLineDash([8,6]); ctx.lineDashOffset=-t*20;
+  ctx.shadowColor='#90caf9'; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.moveTo(150,200); ctx.quadraticCurveTo(250,220,360,265); ctx.stroke();
+  ctx.setLineDash([]);
+  // Water up
+  ctx.strokeStyle='rgba(30,150,255,0.5)'; ctx.lineWidth=3; ctx.setLineDash([10,8]); ctx.lineDashOffset=t*20;
+  ctx.shadowColor='#29b6f6'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.moveTo(426,580); ctx.lineTo(426,380); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawLabels(cycleT){
+  const labels=[
+    {text:'☀️ SUNLIGHT', sub:'Solar Energy', x:690,y:135,c:'#ffeb3b'},
+    {text:'💧 WATER', sub:'H₂O from Roots', x:150,y:285,c:'#29b6f6'},
+    {text:'💨 CO₂', sub:'From Air (Stomata)', x:155,y:215,c:'#b0bec5'},
+    {text:'🍃 CHLOROPHYLL', sub:'Captures Light', x:680,y:295,c:'#69f0ae'},
+    {text:'⚡ GLUCOSE Made!', sub:'Sugar = Food!', x:685,y:380,c:'#ffd740'},
+    {text:'💨 O₂ Released!', sub:'We Breathe It!', x:680,y:465,c:'#80deea'},
+  ];
+  labels.forEach((l,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cycleT-(i*0.14))*6));
+    if(alpha<=0) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=175,bh=50,bx=l.x-bw/2,by=l.y-bh/2;
+    ctx.shadowColor=l.c; ctx.shadowBlur=15;
+    ctx.fillStyle='rgba(0,8,0,0.94)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=l.c; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(l.text,l.x,l.y-2); ctx.font='10px Segoe UI'; ctx.fillStyle=l.c;
+    ctx.fillText(l.sub,l.x,l.y+15); ctx.restore();
+  });
+}
+
+function drawFormula(){
+  ctx.save(); ctx.globalAlpha=0.9;
+  let bx=590,by=520,bw=290,bh=80;
+  ctx.fillStyle='rgba(0,15,5,0.96)'; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=18;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,12); ctx.fill();
+  ctx.strokeStyle='#69f0ae'; ctx.lineWidth=2; ctx.stroke();
+  ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='bold 15px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('PHOTOSYNTHESIS FORMULA:',bx+bw/2,by+22);
+  ctx.font='bold 13px Segoe UI'; ctx.fillStyle='#a5f6a5';
+  ctx.fillText('CO₂ + H₂O + ☀️  →  Glucose + O₂',bx+bw/2,by+44);
+  ctx.font='11px Segoe UI'; ctx.fillStyle='rgba(180,255,180,0.7)';
+  ctx.fillText('Happens in CHLOROPLAST of leaves',bx+bw/2,by+64);
+  ctx.restore();
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#69f0ae'); g.addColorStop(0.5,'#ffeb3b'); g.addColorStop(1,'#69f0ae');
+  ctx.font='bold 33px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#4caf50'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🌿 PHOTOSYNTHESIS 🌿',W/2,44);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(150,255,150,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How Plants Make Food from Sunlight',W/2,66);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let cycleT=(t%22)/22;
+  let pulse=Math.abs(Math.sin(t*1.5));
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+  drawRoot();
+  drawTree(pulse);
+  drawSun(pulse);
+  drawArrows(pulse);
+  // Particles
+  spawnPhotons(); spawnBubbles(); spawnWater();
+  photons=photons.filter(p=>p.life>0); photons.forEach(p=>{p.update();p.draw();});
+  bubbles=bubbles.filter(b=>b.life>0); bubbles.forEach(b=>{b.update();b.draw();});
+  waterDrops=waterDrops.filter(w=>w.life>0); waterDrops.forEach(w=>{w.update();w.draw();});
+  drawLabels(cycleT);
+  drawFormula();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

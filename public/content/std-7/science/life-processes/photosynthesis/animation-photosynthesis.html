@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photosynthesis - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#071a0f 0%,#010a04 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(80,255,120,0.3),0 0 200px rgba(50,200,80,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Particles for CO2, O2, water, glucose
+let particles=[];
+class Particle {
+  constructor(type){
+    this.type=type;
+    if(type==='co2'){ this.x=60+Math.random()*80; this.y=200+Math.random()*200; this.vx=1.2+Math.random()*0.8; this.vy=(Math.random()-0.5)*0.5; this.color='#ef5350'; this.label='CO₂'; }
+    else if(type==='water'){ this.x=80+Math.random()*60; this.y=500+Math.random()*80; this.vx=0.5+Math.random()*0.5; this.vy=-1.8-Math.random()*0.7; this.color='#40c4ff'; this.label='H₂O'; }
+    else if(type==='o2'){ this.x=460; this.y=300+Math.random()*80; this.vx=1.8+Math.random(); this.vy=-1-Math.random(); this.color='#69f0ae'; this.label='O₂'; }
+    else{ this.x=460; this.y=300+Math.random()*80; this.vx=-1.5-Math.random(); this.vy=1.5+Math.random(); this.color='#ffd54f'; this.label='Glucose'; }
+    this.r=8; this.life=1; this.age=0;
+  }
+  update(){
+    this.x+=this.vx; this.y+=this.vy; this.age+=0.01;
+    if(this.type==='co2'&&this.x>430) this.life=0;
+    if(this.type==='water'&&this.x>430) this.life=0;
+    if(this.type==='o2'&&(this.x>860||this.y<50)) this.life=0;
+    if(this.type==='glucose'&&(this.x<50||this.y>650)) this.life=0;
+    this.life-=0.004;
+  }
+  draw(){
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,this.life);
+    ctx.shadowColor=this.color; ctx.shadowBlur=12;
+    ctx.fillStyle=this.color;
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 9px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(this.label,this.x,this.y+3);
+    ctx.restore();
+  }
+}
+
+// Sun rays
+function drawSun(){
+  let sx=720, sy=100;
+  ctx.save();
+  // Rays
+  for(let i=0;i<12;i++){
+    let angle=i*(Math.PI/6)+t*0.3;
+    let len=60+Math.sin(t*2+i)*15;
+    ctx.strokeStyle=`rgba(255,220,50,${0.4+Math.sin(t+i)*0.2})`;
+    ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(sx+Math.cos(angle)*55,sy+Math.sin(angle)*55);
+    ctx.lineTo(sx+Math.cos(angle)*(55+len),sy+Math.sin(angle)*(55+len));
+    ctx.stroke();
+  }
+  // Sun body
+  let g=ctx.createRadialGradient(sx-10,sy-10,5,sx,sy,55);
+  g.addColorStop(0,'#fff9c4'); g.addColorStop(0.5,'#ffee58'); g.addColorStop(1,'#f9a825');
+  ctx.fillStyle=g; ctx.shadowColor='#ffee58'; ctx.shadowBlur=40;
+  ctx.beginPath(); ctx.arc(sx,sy,55,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#5d4037'; ctx.font='bold 28px serif'; ctx.textAlign='center';
+  ctx.fillText('☀️',sx,sy+10);
+  // Label
+  ctx.fillStyle='#fff176'; ctx.font='bold 16px Segoe UI'; ctx.shadowBlur=0;
+  ctx.fillText('SUNLIGHT ☀️',sx,sy+85);
+  ctx.restore();
+}
+
+// Light beams from sun to leaf
+function drawLightBeams(){
+  for(let i=0;i<4;i++){
+    let alpha=0.3+Math.sin(t*2+i*1.5)*0.15;
+    ctx.save();
+    ctx.strokeStyle=`rgba(255,240,50,${alpha})`;
+    ctx.lineWidth=2+i*0.5; ctx.setLineDash([10,8]);
+    ctx.lineDashOffset=-t*30;
+    ctx.beginPath();
+    ctx.moveTo(720-i*15,150+i*5);
+    ctx.quadraticCurveTo(600,220,450-i*10,300+i*10);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// Big leaf
+function drawLeaf(pulse){
+  ctx.save();
+  ctx.translate(350,310);
+  let sc=1+pulse*0.012;
+  ctx.scale(sc,sc);
+  // Leaf shape
+  let g=ctx.createRadialGradient(-20,-40,10,0,0,180);
+  g.addColorStop(0,'#a5d6a7'); g.addColorStop(0.4,'#4caf50'); g.addColorStop(1,'#1b5e20');
+  ctx.fillStyle=g; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=30;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-120,-80,-180,-160,-100,-250);
+  ctx.bezierCurveTo(-20,-340,80,-300,120,-200);
+  ctx.bezierCurveTo(160,-100,140,-40,0,0);
+  ctx.fill();
+  // Veins
+  ctx.strokeStyle='rgba(200,255,200,0.5)'; ctx.lineWidth=3; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-40,-250); ctx.stroke(); // midrib
+  for(let i=1;i<=5;i++){
+    let vy=-45*i; let vx=i%2===0?-90:90;
+    ctx.beginPath(); ctx.moveTo(-20,-45*i); ctx.quadraticCurveTo(vx/2,vy-15,vx,vy-5); ctx.stroke();
+  }
+  // Chloroplast dots
+  ctx.shadowBlur=0;
+  const cpos=[[-40,-80],[-70,-130],[-20,-160],[30,-140],[50,-100],[-60,-200],[10,-220]];
+  cpos.forEach(([cx,cy])=>{
+    let gr=ctx.createRadialGradient(cx-2,cy-2,1,cx,cy,12);
+    gr.addColorStop(0,'#b9f6ca'); gr.addColorStop(1,'#00c853');
+    ctx.fillStyle=gr; ctx.shadowColor='#00e676'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.ellipse(cx,cy,12,8,Math.PI/4+Math.sin(t),0,Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+// Soil and roots
+function drawSoilRoots(pulse){
+  // Soil
+  let sg=ctx.createLinearGradient(0,550,0,H);
+  sg.addColorStop(0,'#4e342e'); sg.addColorStop(1,'#3e2723');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.rect(150,570,500,130); ctx.fill();
+  // Water label
+  ctx.fillStyle='#40c4ff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('💧 WATER (H₂O) from Roots',400,610);
+  // Root strands
+  ctx.strokeStyle='#795548'; ctx.lineWidth=4; ctx.lineCap='round';
+  const roots=[[290,570],[310,570],[330,570],[370,570],[400,570],[430,570]];
+  roots.forEach(([rx,ry],i)=>{
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.quadraticCurveTo(rx+(i%2?20:-20),ry+40,rx+Math.sin(i)*30,ry+80); ctx.stroke();
+  });
+  // Water drops in soil
+  for(let i=0;i<6;i++){
+    ctx.fillStyle=`rgba(64,196,255,${0.5+Math.sin(t*2+i)*0.3})`;
+    ctx.beginPath(); ctx.arc(200+i*50,590+Math.sin(t+i)*5,5,0,Math.PI*2); ctx.fill();
+  }
+}
+
+// Equation panel
+function drawEquation(){
+  let px=80, py=60;
+  ctx.save();
+  let bg=ctx.createLinearGradient(px,py,px,py+90);
+  bg.addColorStop(0,'rgba(0,50,20,0.95)'); bg.addColorStop(1,'rgba(0,30,10,0.95)');
+  ctx.fillStyle=bg; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=20;
+  ctx.beginPath(); ctx.roundRect(px,py,560,90,14); ctx.fill();
+  ctx.strokeStyle='#69f0ae'; ctx.lineWidth=2; ctx.shadowBlur=0; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('PHOTOSYNTHESIS EQUATION',px+280,py+22);
+  ctx.fillStyle='#69f0ae'; ctx.font='bold 18px Segoe UI';
+  ctx.fillText('6CO₂ + 6H₂O + Sunlight → C₆H₁₂O₆ (Glucose) + 6O₂',px+280,py+50);
+  ctx.fillStyle='rgba(180,255,200,0.8)'; ctx.font='13px Segoe UI';
+  ctx.fillText('Carbon Dioxide + Water + Light Energy → Sugar + Oxygen',px+280,py+75);
+  ctx.restore();
+}
+
+// Step labels on sides
+const STEPS=[
+  {label:'① CO₂ Enters',sub:'Through tiny leaf pores\n(stomata) 🌬️',color:'#ef9a9a',x:80,y:280},
+  {label:'② H₂O Absorbed',sub:'Roots absorb water\nfrom soil 💧',color:'#80d8ff',x:80,y:450},
+  {label:'③ Chlorophyll',sub:'Green pigment traps\nsunlight energy 🟢',color:'#b9f6ca',x:550,y:200},
+  {label:'④ Glucose Made',sub:'Sugar = food for plant\n(stored energy) 🍬',color:'#ffd54f',x:580,y:420},
+  {label:'⑤ O₂ Released',sub:'Oxygen exits leaf\nWe breathe it! 😮‍💨',color:'#69f0ae',x:730,y:350},
+];
+
+function drawStepCards(){
+  let cyc=(t%25)/25;
+  STEPS.forEach((s,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/STEPS.length))*7));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=175,bh=70,bx=s.x-bw/2,by=s.y-bh/2;
+    let bg=ctx.createLinearGradient(bx,by,bx,by+bh);
+    bg.addColorStop(0,'rgba(2,15,8,0.97)'); bg.addColorStop(1,'rgba(0,10,5,0.97)');
+    ctx.fillStyle=bg; ctx.shadowColor=s.color; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=s.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(s.label,s.x,s.y-10);
+    ctx.fillStyle=s.color; ctx.font='11px Segoe UI';
+    let lines=s.sub.split('\n');
+    lines.forEach((l,li)=>ctx.fillText(l,s.x,s.y+8+li*14));
+    ctx.restore();
+  });
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#071a0f'); g.addColorStop(1,'#010a04');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,200,100,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#69f0ae'); g.addColorStop(0.5,'#b9f6ca'); g.addColorStop(1,'#00e5ff');
+  ctx.font='bold 34px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#4caf50'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🌿 PHOTOSYNTHESIS 🌿',W/2,640);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(150,255,180,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How Plants Make Their Own Food',W/2,660);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2));
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawEquation();
+  drawLightBeams();
+  drawSun();
+  drawSoilRoots(pulse);
+  drawLeaf(pulse);
+  // Spawn particles
+  if(Math.random()<0.07) particles.push(new Particle('co2'));
+  if(Math.random()<0.07) particles.push(new Particle('water'));
+  if(Math.random()<0.07) particles.push(new Particle('o2'));
+  if(Math.random()<0.05) particles.push(new Particle('glucose'));
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{ p.update(); p.draw(); });
+  drawStepCards();
+  drawTitle();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

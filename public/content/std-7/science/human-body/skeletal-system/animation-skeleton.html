@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skeletal System - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#0a1628 0%,#020810 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(100,200,255,0.3),0 0 200px rgba(50,100,200,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+const PARTS=[
+  {name:'① SKULL',sub:'Protects Brain 🧠',color:'#64ffda',emoji:'💀',x:200,y:95},
+  {name:'② SPINE',sub:'Backbone / Support',color:'#40c4ff',emoji:'🦴',x:670,y:215},
+  {name:'③ RIBS',sub:'Protects Heart & Lungs ❤️',color:'#ffab40',emoji:'🫀',x:195,y:270},
+  {name:'④ PELVIS',sub:'Hip Bones / Base',color:'#ea80fc',emoji:'🦵',x:670,y:400},
+  {name:'⑤ FEMUR',sub:'Longest Bone 💪',color:'#b9f6ca',emoji:'💪',x:195,y:470},
+  {name:'⑥ JOINTS',sub:'Where Bones Meet 🔗',color:'#ff80ab',emoji:'🔗',x:670,y:560},
+];
+
+let spark=[];
+class Spark {
+  constructor(x,y,c){ this.x=x; this.y=y; this.vx=(Math.random()-0.5)*4; this.vy=(Math.random()-2)*3; this.r=Math.random()*3+1; this.c=c; this.life=1; }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.08; this.life-=0.025; }
+  draw(){ ctx.save(); ctx.globalAlpha=this.life; ctx.fillStyle=this.c; ctx.shadowColor=this.c; ctx.shadowBlur=8; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+// Background
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,600);
+  g.addColorStop(0,'#0d1f3c'); g.addColorStop(1,'#020810');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // Grid lines
+  ctx.strokeStyle='rgba(100,200,255,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+// 3D bone-like shape
+function drawBone3D(x,y,len,angle,w,color,glow,pulse){
+  ctx.save();
+  ctx.translate(x,y); ctx.rotate(angle);
+  let bw=w*(1+pulse*0.05);
+  let g=ctx.createLinearGradient(-bw,0,bw,0);
+  g.addColorStop(0,'rgba(0,0,0,0.5)'); g.addColorStop(0.3,color); g.addColorStop(0.7,glow); g.addColorStop(1,'rgba(0,0,0,0.5)');
+  ctx.shadowColor=color; ctx.shadowBlur=20;
+  // Shaft
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.roundRect(-bw/2,0,bw,len,bw/3); ctx.fill();
+  // Knob top
+  ctx.beginPath(); ctx.arc(0,0,bw*0.8,0,Math.PI*2); ctx.fill();
+  // Knob bottom
+  ctx.beginPath(); ctx.arc(0,len,bw*0.8,0,Math.PI*2); ctx.fill();
+  // Highlight
+  ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.ellipse(-bw*0.18,len*0.2,bw*0.2,len*0.25,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// Skull
+function drawSkull(cx,cy,scale,pulse){
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(scale*(1+pulse*0.03),scale*(1+pulse*0.03));
+  let g=ctx.createRadialGradient(-8,-15,5,0,0,55);
+  g.addColorStop(0,'#f5f0e0'); g.addColorStop(0.6,'#dcd8c8'); g.addColorStop(1,'#b0a890');
+  ctx.fillStyle=g; ctx.shadowColor='#64ffda'; ctx.shadowBlur=30;
+  ctx.beginPath(); ctx.arc(0,-15,55,Math.PI,0,false); // cranium
+  ctx.quadraticCurveTo(58,20,40,45);
+  ctx.lineTo(-40,45); ctx.quadraticCurveTo(-58,20,-55,-15);
+  ctx.fill();
+  // Jaw
+  ctx.fillStyle='#cdc8b0';
+  ctx.beginPath(); ctx.roundRect(-35,40,70,30,8); ctx.fill();
+  // Eye sockets
+  ctx.fillStyle='rgba(20,10,40,0.85)'; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.ellipse(-18,-10,18,14,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(18,-10,18,14,0,0,Math.PI*2); ctx.fill();
+  // Nose
+  ctx.beginPath(); ctx.ellipse(0,15,9,10,0,0,Math.PI*2); ctx.fill();
+  // Teeth
+  ctx.fillStyle='#f5f0e0';
+  for(let i=-3;i<=3;i+=1){ ctx.fillRect(i*9-3,50,7,12); }
+  // Highlight
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.ellipse(-15,-30,12,8,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// Spine
+function drawSpine(x,y,pulse){
+  for(let i=0;i<12;i++){
+    let vy=y+i*28;
+    let w=22-i*0.5; let glow=`hsl(${195+i*5},100%,${60+i*2}%)`;
+    let g=ctx.createLinearGradient(x-w,vy,x+w,vy);
+    g.addColorStop(0,'rgba(0,0,0,0.4)'); g.addColorStop(0.3,'#80d8ff'); g.addColorStop(0.7,'#29b6f6'); g.addColorStop(1,'rgba(0,0,0,0.4)');
+    ctx.save();
+    ctx.shadowColor='#40c4ff'; ctx.shadowBlur=15+Math.sin(t*2+i)*5;
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.roundRect(x-w/2,vy,w,22,5); ctx.fill();
+    // Wing extensions
+    ctx.fillStyle='rgba(100,200,255,0.6)';
+    ctx.beginPath(); ctx.moveTo(x-w/2,vy+5); ctx.lineTo(x-w/2-15,vy+11); ctx.lineTo(x-w/2,vy+17); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x+w/2,vy+5); ctx.lineTo(x+w/2+15,vy+11); ctx.lineTo(x+w/2,vy+17); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Ribs
+function drawRibs(cx,cy,pulse){
+  for(let i=0;i<6;i++){
+    let ry=cy+i*22;
+    let yw=90-i*8;
+    ctx.save();
+    ctx.shadowColor='#ffab40'; ctx.shadowBlur=12+pulse*6;
+    ctx.strokeStyle=`rgba(${255-i*10},${160+i*5},60,0.9)`;
+    ctx.lineWidth=7-i*0.4;
+    ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx-12,ry); ctx.quadraticCurveTo(cx-yw-20,ry+8,cx-yw,ry+20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+12,ry); ctx.quadraticCurveTo(cx+yw+20,ry+8,cx+yw,ry+20); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// Pelvis
+function drawPelvis(cx,cy,pulse){
+  ctx.save();
+  let g=ctx.createRadialGradient(cx,cy,5,cx,cy,80);
+  g.addColorStop(0,'#e040fb'); g.addColorStop(0.6,'#ab47bc'); g.addColorStop(1,'#6a1b9a');
+  ctx.fillStyle=g; ctx.shadowColor='#ea80fc'; ctx.shadowBlur=25+pulse*10;
+  ctx.beginPath(); ctx.ellipse(cx,cy,90,50,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx,cy,55,28,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(10,5,20,0.6)'; ctx.fill();
+  // Wings
+  ctx.fillStyle=g; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.ellipse(cx-85,cy-5,25,40,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+85,cy-5,25,40,0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// Femur bones
+function drawFemurs(pulse){
+  drawBone3D(430,390,160,0.05,14,'#b9f6ca','#69f0ae',pulse);
+  drawBone3D(470,390,160,-0.05,14,'#b9f6ca','#69f0ae',pulse);
+  // Lower leg
+  drawBone3D(428,550,90,0.03,10,'#a5d6a7','#4caf50',pulse);
+  drawBone3D(472,550,90,-0.03,10,'#a5d6a7','#4caf50',pulse);
+}
+
+// Joint highlights
+function drawJoints(pulse){
+  const joints=[[430,390],[470,390],[428,550],[472,550],[430,640],[470,640]];
+  joints.forEach(([x,y])=>{
+    ctx.save();
+    ctx.shadowColor='#ff80ab'; ctx.shadowBlur=20+pulse*12;
+    let g=ctx.createRadialGradient(x-3,y-3,1,x,y,15);
+    g.addColorStop(0,'rgba(255,255,255,0.6)'); g.addColorStop(0.4,'#f48fb1'); g.addColorStop(1,'#c2185b');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,13,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+// Label card
+function drawLabelCard(p,alpha){
+  if(alpha<=0) return;
+  ctx.save(); ctx.globalAlpha=alpha;
+  let bw=180, bh=58, bx=p.x-bw/2, by=p.y-bh/2;
+  let bg=ctx.createLinearGradient(bx,by,bx,by+bh);
+  bg.addColorStop(0,'rgba(5,15,35,0.97)'); bg.addColorStop(1,'rgba(5,10,25,0.97)');
+  ctx.fillStyle=bg; ctx.shadowColor=p.color; ctx.shadowBlur=20;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+  ctx.strokeStyle=p.color; ctx.lineWidth=2; ctx.stroke();
+  ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(p.name,p.x,p.y-3);
+  ctx.font='11px Segoe UI'; ctx.fillStyle=p.color;
+  ctx.fillText(p.sub,p.x,p.y+16);
+  ctx.font='18px serif'; ctx.fillText(p.emoji,p.x-70,p.y+8);
+  ctx.restore();
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#64ffda'); g.addColorStop(0.5,'#40c4ff'); g.addColorStop(1,'#ea80fc');
+  ctx.font='bold 34px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#40c4ff'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🦴 SKELETAL SYSTEM 🦴',W/2,45);
+  ctx.font='15px Segoe UI'; ctx.fillStyle='rgba(150,220,255,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How Bones Support Your Body',W/2,68);
+  ctx.restore();
+}
+
+function drawRotatingX(){
+  // Rotating 3D cross marker to add depth feel
+  ctx.save();
+  ctx.translate(W-55,H-55);
+  ctx.rotate(t*0.5);
+  ctx.strokeStyle='rgba(100,200,255,0.4)'; ctx.lineWidth=2;
+  for(let i=0;i<4;i++){
+    ctx.rotate(Math.PI/2);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(30,0); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let cycleT=(t%20)/20;
+  let pulse=Math.abs(Math.sin(t*3));
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+  // Skeleton parts
+  drawSkull(442,130,1+pulse*0.02,pulse);
+  // Arm bones
+  drawBone3D(345,210,120,0.15,12,'#dce0e0','#b0b8b8',pulse);
+  drawBone3D(535,210,120,-0.15,12,'#dce0e0','#b0b8b8',pulse);
+  drawBone3D(340,330,80,0.2,10,'#c8cece','#aaa',pulse);
+  drawBone3D(522,330,80,-0.2,10,'#c8cece','#aaa',pulse);
+  // Torso outline
+  ctx.save(); ctx.strokeStyle='rgba(220,220,240,0.2)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(385,200,130,200,20); ctx.stroke(); ctx.restore();
+  drawSpine(443,205,pulse);
+  drawRibs(443,215,pulse);
+  drawPelvis(443,410,pulse);
+  drawFemurs(pulse);
+  drawJoints(pulse);
+  // Spark particles
+  if(Math.random()<0.04){ const colors=['#64ffda','#40c4ff','#ffab40','#ea80fc','#b9f6ca','#ff80ab']; spark.push(new Spark(380+Math.random()*140,200+Math.random()*350,colors[Math.floor(Math.random()*colors.length)])); }
+  spark=spark.filter(s=>s.life>0); spark.forEach(s=>{s.update();s.draw();});
+  // Labels fade in over time
+  PARTS.forEach((p,i)=>{ let alpha=Math.max(0,Math.min(1,(cycleT-(i/PARTS.length))*8)); drawLabelCard(p,alpha); });
+  drawRotatingX();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

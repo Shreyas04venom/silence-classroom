@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triangles - Types & Properties</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #6A1B9A, #8E24AA);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #container {
+            position: relative;
+            width: 950px;
+            height: 700px;
+            background: linear-gradient(to bottom, #F3E5F5, #E1BEE7);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #4A148C;
+            text-align: center;
+            z-index: 200;
+        }
+
+        .triangle {
+            position: absolute;
+            transition: all 0.5s ease;
+            cursor: pointer;
+        }
+
+        .triangle:hover {
+            transform: scale(1.1);
+        }
+
+        .equilateral {
+            width: 0;
+            height: 0;
+            border-left: 100px solid transparent;
+            border-right: 100px solid transparent;
+            border-bottom: 173px solid #E91E63;
+        }
+
+        .isosceles {
+            width: 0;
+            height: 0;
+            border-left: 80px solid transparent;
+            border-right: 80px solid transparent;
+            border-bottom: 180px solid #FF9800;
+        }
+
+        .scalene {
+            width: 0;
+            height: 0;
+            border-left: 60px solid transparent;
+            border-right: 120px solid transparent;
+            border-bottom: 160px solid #4CAF50;
+        }
+
+        .right {
+            width: 0;
+            height: 0;
+            border-left: 140px solid transparent;
+            border-bottom: 140px solid #2196F3;
+        }
+
+        .tri-label {
+            position: absolute;
+            background: white;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 3px solid;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .property {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 2px solid;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+
+        .property.active {
+            opacity: 1;
+        }
+
+        .formula {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 18px 30px;
+            border-radius: 18px;
+            border: 4px solid #6A1B9A;
+            font-size: 24px;
+            font-weight: bold;
+            color: #4A148C;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="title">△ TYPES OF TRIANGLES △</div>
+        <div style="position:absolute;top:120px;left:100px;">
+            <div class="triangle equilateral"></div>
+            <div class="tri-label"
+                style="top:190px;left:50%;transform:translateX(-50%);border-color:#E91E63;color:#E91E63;">
+                EQUILATERAL<br>All sides equal</div>
+            <div class="property" id="prop1" style="top:-30px;left:70px;border-color:#E91E63;color:#E91E63;">60°-60°-60°
+            </div>
+        </div>
+        <div style="position:absolute;top:120px;right:120px;">
+            <div class="triangle isosceles"></div>
+            <div class="tri-label"
+                style="top:190px;left:50%;transform:translateX(-50%);border-color:#FF9800;color:#FF9800;">ISOSCELES<br>2
+                sides equal</div>
+            <div class="property" id="prop2" style="top:-30px;left:60px;border-color:#FF9800;color:#FF9800;">2 angles
+                equal</div>
+        </div>
+        <div style="position:absolute;bottom:200px;left:150px;">
+            <div class="triangle scalene"></div>
+            <div class="tri-label"
+                style="top:180px;left:50%;transform:translateX(-50%);border-color:#4CAF50;color:#4CAF50;">SCALENE<br>All
+                sides different</div>
+            <div class="property" id="prop3" style="top:-30px;left:70px;border-color:#4CAF50;color:#4CAF50;">All angles
+                different</div>
+        </div>
+        <div style="position:absolute;bottom:200px;right:150px;">
+            <div class="triangle right"></div>
+            <div class="tri-label"
+                style="top:160px;left:50%;transform:translateX(-50%);border-color:#2196F3;color:#2196F3;">RIGHT
+                ANGLE<br>One 90° angle</div>
+            <div class="property" id="prop4" style="top:-30px;left:50px;border-color:#2196F3;color:#2196F3;">a² + b² =
+                c²</div>
+        </div>
+        <div class="formula" id="formula">Sum of all angles = 180°</div>
+    </div>
+    <script>
+        const properties = ['prop1', 'prop2', 'prop3', 'prop4'];
+        const formulas = [
+            'Sum of all angles = 180°',
+            'Area = ½ × base × height',
+            'Perimeter = a + b + c'
+        ];
+        let formulaIdx = 0;
+        function animateProperties() {
+            const timings = [500, 1500, 2500, 3500];
+            properties.forEach((id, i) => {
+                setTimeout(() => document.getElementById(id).classList.add('active'), timings[i]);
+            });
+        }
+        function resetProperties() {
+            properties.forEach(id => document.getElementById(id).classList.remove('active'));
+        }
+        function rotateFormula() {
+            const formulaEl = document.getElementById('formula');
+            formulaEl.textContent = formulas[formulaIdx];
+            formulaIdx = (formulaIdx + 1) % formulas.length;
+        }
+        animateProperties();
+        rotateFormula();
+        setInterval(rotateFormula, 3500);
+        setInterval(() => {
+            resetProperties();
+            setTimeout(animateProperties, 1000);
+        }, 15000);
+    </script>
+</body>
+
+</html>

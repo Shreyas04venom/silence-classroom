@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quadrilaterals - Animation (Std 8)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#0a0d1a 0%,#020308 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(100,150,255,0.3),0 0 200px rgba(50,80,220,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Helper: draw labeled angle arc
+function drawAngle(cx,cy,start,end,color,label,r){
+  r=r||20;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.globalAlpha=0.8;
+  ctx.beginPath(); ctx.arc(cx,cy,r,start,end); ctx.stroke();
+  let mid=(start+end)/2;
+  ctx.fillStyle=color; ctx.font='bold 10px Segoe UI'; ctx.textAlign='center'; ctx.globalAlpha=1;
+  ctx.fillText(label,cx+Math.cos(mid)*(r+12),cy+Math.sin(mid)*(r+12));
+  ctx.restore();
+}
+
+// Helper: draw measurement line
+function drawMeasure(x1,y1,x2,y2,label,color){
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=color; ctx.font='bold 10px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(label,(x1+x2)/2-5,(y1+y2)/2-8);
+  ctx.restore();
+}
+
+// Draw any quadrilateral with glow fill
+function drawQuad(pts,fillColor,strokeColor,glowColor,pulse){
+  ctx.save();
+  let g=ctx.createLinearGradient(pts[0][0],pts[0][1],pts[2][0],pts[2][1]);
+  g.addColorStop(0,fillColor+'33'); g.addColorStop(1,fillColor+'66');
+  ctx.fillStyle=g; ctx.shadowColor=glowColor; ctx.shadowBlur=20+pulse*10;
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=strokeColor; ctx.lineWidth=3; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.closePath(); ctx.stroke();
+  ctx.restore();
+}
+
+// Right-angle marker
+function drawRightAngle(x,y,dir,color){
+  let s=12;
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.shadowBlur=0;
+  if(dir==='tr'){ ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x+s,y-s); ctx.lineTo(x+s,y); ctx.stroke(); }
+  else if(dir==='tl'){ ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x-s,y-s); ctx.lineTo(x-s,y); ctx.stroke(); }
+  else if(dir==='br'){ ctx.beginPath(); ctx.moveTo(x,y+s); ctx.lineTo(x+s,y+s); ctx.lineTo(x+s,y); ctx.stroke(); }
+  else if(dir==='bl'){ ctx.beginPath(); ctx.moveTo(x,y+s); ctx.lineTo(x-s,y+s); ctx.lineTo(x-s,y); ctx.stroke(); }
+  ctx.restore();
+}
+
+// Parallel mark
+function drawParallelMark(x1,y1,x2,y2,n,color){
+  ctx.save();
+  let mx=(x1+x2)/2, my=(y1+y2)/2;
+  let ang=Math.atan2(y2-y1,x2-x1)+Math.PI/2;
+  for(let i=0;i<n;i++){
+    let off=(i-(n-1)/2)*5;
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.shadowBlur=0;
+    ctx.beginPath();
+    ctx.moveTo(mx+Math.cos(ang)*8+Math.cos(ang-Math.PI/2)*off,my+Math.sin(ang)*8+Math.sin(ang-Math.PI/2)*off);
+    ctx.lineTo(mx-Math.cos(ang)*8+Math.cos(ang-Math.PI/2)*off,my-Math.sin(ang)*8+Math.sin(ang-Math.PI/2)*off);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---- 1. SQUARE ----
+function drawSquare(ox,oy,pulse){
+  let s=100;
+  let pts=[[ox,oy],[ox+s,oy],[ox+s,oy+s],[ox,oy+s]];
+  drawQuad(pts,'#40c4ff','#00b0ff','#40c4ff',pulse);
+  // Right angles
+  drawRightAngle(ox,oy,'br','#40c4ff');
+  drawRightAngle(ox+s,oy,'bl','#40c4ff');
+  drawRightAngle(ox+s,oy+s,'tl','#40c4ff');
+  drawRightAngle(ox,oy+s,'tr','#40c4ff');
+  // Parallel marks
+  drawParallelMark(ox,oy,ox+s,oy,2,'#40c4ff');
+  drawParallelMark(ox,oy+s,ox+s,oy+s,2,'#40c4ff');
+  drawParallelMark(ox,oy,ox,oy+s,1,'#40c4ff');
+  drawParallelMark(ox+s,oy,ox+s,oy+s,1,'#40c4ff');
+  // Diagonal
+  ctx.save(); ctx.strokeStyle='rgba(100,220,255,0.3)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+s,oy+s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox+s,oy); ctx.lineTo(ox,oy+s); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+  // Labels
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('◻ SQUARE',ox+s/2,oy-18);
+  ctx.fillStyle='#80d8ff'; ctx.font='10px Segoe UI';
+  ctx.fillText('All sides EQUAL',ox+s/2,oy+s+20);
+  ctx.fillText('All angles = 90°',ox+s/2,oy+s+34);
+  ctx.fillText('Diagonals bisect ⊥',ox+s/2,oy+s+48);
+}
+
+// ---- 2. RECTANGLE ----
+function drawRectangle(ox,oy,pulse){
+  let w=130, h=85;
+  let pts=[[ox,oy],[ox+w,oy],[ox+w,oy+h],[ox,oy+h]];
+  drawQuad(pts,'#69f0ae','#00c853','#69f0ae',pulse);
+  drawRightAngle(ox,oy,'br','#69f0ae');
+  drawRightAngle(ox+w,oy,'bl','#69f0ae');
+  drawRightAngle(ox+w,oy+h,'tl','#69f0ae');
+  drawRightAngle(ox,oy+h,'tr','#69f0ae');
+  drawParallelMark(ox,oy,ox+w,oy,2,'#69f0ae');
+  drawParallelMark(ox,oy+h,ox+w,oy+h,2,'#69f0ae');
+  drawParallelMark(ox,oy,ox,oy+h,1,'#69f0ae');
+  drawParallelMark(ox+w,oy,ox+w,oy+h,1,'#69f0ae');
+  drawMeasure(ox,oy-5,ox+w,oy-5,'l','rgba(180,255,220,0.7)');
+  drawMeasure(ox+w+5,oy,ox+w+5,oy+h,'b','rgba(180,255,220,0.7)');
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('▭ RECTANGLE',ox+w/2,oy-22);
+  ctx.fillStyle='#b9f6ca'; ctx.font='10px Segoe UI';
+  ctx.fillText('Opposite sides equal',ox+w/2,oy+h+20);
+  ctx.fillText('All angles = 90°',ox+w/2,oy+h+34);
+  ctx.fillText('Diagonals equal length',ox+w/2,oy+h+48);
+}
+
+// ---- 3. PARALLELOGRAM ----
+function drawParallelogram(ox,oy,pulse){
+  let w=130, h=80, sk=35;
+  let pts=[[ox+sk,oy],[ox+w+sk,oy],[ox+w,oy+h],[ox,oy+h]];
+  drawQuad(pts,'#ffd54f','#ffca28','#ffd54f',pulse);
+  drawParallelMark(pts[0][0],pts[0][1],pts[1][0],pts[1][1],2,'#ffd54f');
+  drawParallelMark(pts[3][0],pts[3][1],pts[2][0],pts[2][1],2,'#ffd54f');
+  drawParallelMark(pts[0][0],pts[0][1],pts[3][0],pts[3][1],1,'#ffd54f');
+  drawParallelMark(pts[1][0],pts[1][1],pts[2][0],pts[2][1],1,'#ffd54f');
+  // Height indicator
+  ctx.save(); ctx.strokeStyle='rgba(255,230,100,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  let hx=pts[1][0]; ctx.beginPath(); ctx.moveTo(hx,oy); ctx.lineTo(hx,oy+h); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+  ctx.fillStyle='rgba(255,240,100,0.7)'; ctx.font='9px Segoe UI'; ctx.textAlign='left'; ctx.fillText('h',hx+4,(oy+oy+h)/2);
+  // Angles
+  drawAngle(pts[3][0],pts[3][1],0,Math.atan2(pts[0][1]-pts[3][1],pts[0][0]-pts[3][0]),'#ffd54f','∠',22);
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('▱ PARALLELOGRAM',ox+w*0.7,oy-18);
+  ctx.fillStyle='#fff9c4'; ctx.font='10px Segoe UI';
+  ctx.fillText('Opposite sides ∥ & equal',ox+w*0.7,oy+h+20);
+  ctx.fillText('Opposite angles equal',ox+w*0.7,oy+h+34);
+  ctx.fillText('Diagonals bisect each other',ox+w*0.7,oy+h+48);
+}
+
+// ---- 4. RHOMBUS ----
+function drawRhombus(ox,oy,pulse){
+  let s=70;
+  let pts=[[ox+s,oy],[ox+2*s,oy+s],[ox+s,oy+2*s],[ox,oy+s]];
+  drawQuad(pts,'#ea80fc','#e040fb','#ea80fc',pulse);
+  drawParallelMark(pts[0][0],pts[0][1],pts[1][0],pts[1][1],1,'#ea80fc');
+  drawParallelMark(pts[3][0],pts[3][1],pts[2][0],pts[2][1],1,'#ea80fc');
+  drawParallelMark(pts[0][0],pts[0][1],pts[3][0],pts[3][1],1,'#ea80fc');
+  drawParallelMark(pts[1][0],pts[1][1],pts[2][0],pts[2][1],1,'#ea80fc');
+  // Diagonals perpendicular
+  ctx.save(); ctx.strokeStyle='rgba(255,150,255,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[2][0],pts[2][1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pts[1][0],pts[1][1]); ctx.lineTo(pts[3][0],pts[3][1]); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+  drawRightAngle(ox+s,oy+s,'br','#ea80fc');
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('◇ RHOMBUS',ox+s,oy-18);
+  ctx.fillStyle='#f3e5f5'; ctx.font='10px Segoe UI';
+  ctx.fillText('All sides EQUAL',ox+s,oy+2*s+20);
+  ctx.fillText('Diagonals bisect at 90°',ox+s,oy+2*s+34);
+  ctx.fillText('Opposite angles equal',ox+s,oy+2*s+48);
+}
+
+// ---- 5. TRAPEZIUM ----
+function drawTrapezium(ox,oy,pulse){
+  let pts=[[ox+30,oy],[ox+130,oy],[ox+160,oy+80],[ox,oy+80]];
+  drawQuad(pts,'#ff8a65','#ff5722','#ff8a65',pulse);
+  drawParallelMark(pts[0][0],pts[0][1],pts[1][0],pts[1][1],1,'#ff8a65');
+  drawParallelMark(pts[3][0],pts[3][1],pts[2][0],pts[2][1],1,'#ff8a65');
+  drawMeasure(pts[0][0],pts[0][1]-5,pts[1][0],pts[1][1]-5,'a','rgba(255,180,140,0.7)');
+  drawMeasure(pts[3][0],pts[3][1]+5,pts[2][0],pts[2][1]+5,'b','rgba(255,180,140,0.7)');
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('▼ TRAPEZIUM',ox+80,oy-18);
+  ctx.fillStyle='#ffccbc'; ctx.font='10px Segoe UI';
+  ctx.fillText('ONE pair of parallel sides',ox+80,oy+80+20);
+  ctx.fillText('a ∥ b (a ≠ b)',ox+80,oy+80+34);
+}
+
+// ---- 6. KITE ----
+function drawKite(ox,oy,pulse){
+  let pts=[[ox+45,oy],[ox+90,oy+55],[ox+45,oy+130],[ox,oy+55]];
+  drawQuad(pts,'#80cbc4','#26a69a','#80cbc4',pulse);
+  // Equal sides marks
+  drawParallelMark(pts[0][0],pts[0][1],pts[1][0],pts[1][1],1,'#80cbc4');
+  drawParallelMark(pts[0][0],pts[0][1],pts[3][0],pts[3][1],1,'#80cbc4');
+  drawParallelMark(pts[1][0],pts[1][1],pts[2][0],pts[2][1],2,'#80cbc4');
+  drawParallelMark(pts[3][0],pts[3][1],pts[2][0],pts[2][1],2,'#80cbc4');
+  // Main diagonal
+  ctx.save(); ctx.strokeStyle='rgba(130,220,210,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[2][0],pts[2][1]); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('🪁 KITE',ox+45,oy-18);
+  ctx.fillStyle='#e0f2f1'; ctx.font='10px Segoe UI';
+  ctx.fillText('2 pairs of adjacent equal sides',ox+45,oy+130+20);
+  ctx.fillText('One diagonal perpendicular',ox+45,oy+130+34);
+}
+
+// Rotating 3D marker
+function drawRotX(){
+  ctx.save(); ctx.translate(W-50,H-50); ctx.rotate(t*0.4);
+  ctx.strokeStyle='rgba(150,180,255,0.4)'; ctx.lineWidth=2;
+  for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(28,0); ctx.stroke(); }
+  ctx.restore();
+}
+
+// Summary formula panel
+function drawFormulas(){
+  ctx.save();
+  ctx.fillStyle='rgba(5,8,25,0.92)'; ctx.shadowColor='#40c4ff'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.roundRect(620,430,255,190,12); ctx.fill();
+  ctx.strokeStyle='#40c4ff'; ctx.lineWidth=2; ctx.shadowBlur=0; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('📐 AREA FORMULAS',748,452);
+  const fmls=[
+    ['Square','= side²'],
+    ['Rectangle','= l × b'],
+    ['Parallelogram','= base × h'],
+    ['Rhombus','= ½ × d₁ × d₂'],
+    ['Trapezium','= ½(a+b)×h'],
+    ['Kite','= ½ × d₁ × d₂'],
+  ];
+  const colors=['#40c4ff','#69f0ae','#ffd54f','#ea80fc','#ff8a65','#80cbc4'];
+  fmls.forEach(([n,f],i)=>{
+    ctx.fillStyle=colors[i]; ctx.font='bold 10px Segoe UI'; ctx.textAlign='left'; ctx.fillText(n,632,472+i*24);
+    ctx.fillStyle='#fff'; ctx.font='10px Segoe UI'; ctx.textAlign='right'; ctx.fillText(f,868,472+i*24);
+  });
+  ctx.restore();
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#0a0d1a'); g.addColorStop(1,'#020308');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,120,200,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#40c4ff'); g.addColorStop(0.5,'#ea80fc'); g.addColorStop(1,'#69f0ae');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#5c6bc0'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('📐 QUADRILATERALS 📐',W/2,40);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(180,200,255,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — 6 Types of Quadrilaterals (Std 8)',W/2,62);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2));
+  ctx.clearRect(0,0,W,H);
+  drawBg(); drawTitle();
+  // Animate highlight cycling
+  let highlight=Math.floor((t%12)/2);
+  // Layout: 3 columns, 2 rows
+  drawSquare(70,120,highlight===0?pulse:0.2);
+  drawRectangle(245,120,highlight===1?pulse:0.2);
+  drawParallelogram(455,120,highlight===2?pulse:0.2);
+  drawRhombus(70,370,highlight===3?pulse:0.2);
+  drawTrapezium(270,440,highlight===4?pulse:0.2);
+  drawKite(470,390,highlight===5?pulse:0.2);
+
+  drawFormulas();
+  drawRotX();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

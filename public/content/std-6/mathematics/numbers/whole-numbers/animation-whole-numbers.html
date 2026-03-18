@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whole Numbers - Visual Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 950px;
+            height: 700px;
+            background: linear-gradient(to bottom, #E3F2FD 0%, #BBDEFB 100%);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 38px;
+            font-weight: bold;
+            color: #0D47A1;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            z-index: 200;
+        }
+
+        .number-line {
+            position: absolute;
+            top: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 850px;
+            height: 8px;
+            background: linear-gradient(to right, #1976D2, #64B5F6);
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .number-point {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #2196F3, #1976D2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 6px 15px rgba(25, 118, 210, 0.4);
+            transition: all 0.3s ease;
+            border: 4px solid white;
+        }
+
+        .number-point.zero {
+            background: radial-gradient(circle, #FFC107, #FF9800);
+            border-color: #FFF9C4;
+            animation: zeroSpecial 2s ease-in-out infinite;
+        }
+
+        @keyframes zeroSpecial {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 8px 20px rgba(255, 152, 0, 0.6);
+            }
+        }
+
+        .number-point.highlighted {
+            animation: pulse 1s ease-in-out infinite;
+            background: radial-gradient(circle, #4CAF50, #2E7D32);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+        }
+
+        .info-card {
+            position: absolute;
+            background: white;
+            padding: 18px 24px;
+            border-radius: 18px;
+            border: 4px solid #2196F3;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            font-size: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.5s ease;
+            z-index: 150;
+        }
+
+        .info-card.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #card1 {
+            top: 100px;
+            left: 60px;
+            color: #FF6F00;
+            max-width: 280px;
+        }
+
+        #card2 {
+            top: 420px;
+            left: 80px;
+            color: #1976D2;
+            max-width: 250px;
+        }
+
+        #card3 {
+            top: 100px;
+            right: 60px;
+            color: #388E3C;
+            max-width: 280px;
+        }
+
+        .comparison-box {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFF9C4, #FFE082);
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 4px solid #FFA000;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .comparison-box h3 {
+            color: #F57C00;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .comparison-box .row {
+            display: flex;
+            justify-content: space-around;
+            margin: 8px 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .comparison-box .natural {
+            color: #FF6F00;
+        }
+
+        .comparison-box .whole {
+            color: #1976D2;
+        }
+
+        .operation {
+            position: absolute;
+            top: 500px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: #0D47A1;
+            background: white;
+            padding: 16px 35px;
+            border-radius: 18px;
+            border: 4px solid #2196F3;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        .operation.show {
+            display: block;
+            animation: fadeInScale 0.5s ease;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        .zero-highlight {
+            position: absolute;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFECB3, #FFE082);
+            padding: 15px 25px;
+            border-radius: 18px;
+            border: 3px solid #FF9800;
+            font-size: 22px;
+            font-weight: bold;
+            color: #E65100;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .zero-highlight.show {
+            display: block;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="animation-container">
+        <div class="title">🔢 WHOLE NUMBERS (0, 1, 2, 3...) 🔢</div>
+
+        <div id="card1" class="info-card">⭐ Includes ZERO (0)<br>Natural numbers don't have 0!</div>
+        <div id="card2" class="info-card">➕ Used for counting<br>AND measuring empty sets</div>
+        <div id="card3" class="info-card">♾️ Infinite numbers<br>Starting from 0</div>
+
+        <div class="number-line"></div>
+
+        <div id="zero-highlight" class="zero-highlight">
+            ⚡ Zero (0) = Nothing, Empty, Null ⚡
+        </div>
+
+        <div id="operation" class="operation"></div>
+
+        <div class="comparison-box">
+            <h3>📊 Whole vs Natural Numbers</h3>
+            <div class="row">
+                <span class="natural">Natural: 1, 2, 3, 4, 5...</span>
+            </div>
+            <div class="row">
+                <span class="whole">Whole: 0, 1, 2, 3, 4, 5...</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 18px; color: #E65100;">
+                🎯 Only difference = Zero!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('animation-container');
+        const operationDiv = document.getElementById('operation');
+        const zeroHighlight = document.getElementById('zero-highlight');
+        const cards = ['card1', 'card2', 'card3'];
+        let currentHighlight = 0;
+
+        // Create number line with 0
+        function createNumberLine() {
+            for (let i = 0; i <= 9; i++) {
+                const point = document.createElement('div');
+                point.className = 'number-point' + (i === 0 ? ' zero' : '');
+                point.textContent = i;
+                point.style.top = '220px';
+                point.style.left = `${50 + i * 85}px`;
+                container.appendChild(point);
+            }
+        }
+
+        // Highlight sequence
+        function highlightSequence() {
+            const points = document.querySelectorAll('.number-point:not(.zero)');
+            currentHighlight = (currentHighlight % points.length);
+
+            points.forEach(p => p.classList.remove('highlighted'));
+            points[currentHighlight].classList.add('highlighted');
+            currentHighlight++;
+        }
+
+        // Show operations
+        function showOperation(op) {
+            operationDiv.textContent = op;
+            operationDiv.classList.add('show');
+            setTimeout(() => operationDiv.classList.remove('show'), 3000);
+        }
+
+        // Animate cards
+        function animateCards() {
+            const timings = [500, 2500, 4500];
+            cards.forEach((id, i) => {
+                setTimeout(() => {
+                    document.getElementById(id).classList.add('active');
+                }, timings[i]);
+            });
+        }
+
+        // Main sequence
+        function runSequence() {
+            cards.forEach(id => document.getElementById(id).classList.remove('active'));
+            document.querySelectorAll('.number-point:not(.zero)').forEach(p => p.classList.remove('highlighted'));
+
+            animateCards();
+
+            // Show zero importance
+            setTimeout(() => {
+                zeroHighlight.classList.add('show');
+            }, 1000);
+            setTimeout(() => {
+                zeroHighlight.classList.remove('show');
+            }, 4000);
+
+            // Highlight numbers
+            setInterval(highlightSequence, 1200);
+
+            // Show operations with zero
+            setTimeout(() => showOperation('5 + 0 = 5'), 6000);
+            setTimeout(() => showOperation('0 + 3 = 3'), 9000);
+            setTimeout(() => showOperation('7 - 0 = 7'), 12000);
+            setTimeout(() => showOperation('0 × 5 = 0'), 15000);
+        }
+
+        createNumberLine();
+        runSequence();
+        setInterval(runSequence, 18000);
+    </script>
+</body>
+
+</html>

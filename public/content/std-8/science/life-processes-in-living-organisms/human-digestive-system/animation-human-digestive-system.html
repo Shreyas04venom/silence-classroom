@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Human Digestive System - Animation (Std 8)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#150a05 0%,#060201 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(255,120,60,0.3),0 0 200px rgba(180,60,20,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Multiple animated food boli
+class Bolus {
+  constructor(startT){
+    this.startT=startT; this.color=`hsl(${35+Math.random()*25},90%,60%)`;
+    this.r=8+Math.random()*4;
+  }
+  getPos(p){
+    // More detailed path: mouth → pharynx → esophagus → cardiac sphincter → stomach → pyloric sphincter → duodenum → jejunum → ileum → ileocecal → cecum → ascending → transverse → descending → sigmoid → rectum → anus
+    const path=[
+      [340,75],[340,100],[340,130],[340,175],[340,210],// esophagus
+      [330,240],[310,260],[295,290],[300,320],[315,345],[330,360],[345,355],[355,340],[355,320],[345,300],[330,285],// stomach
+      [350,295],[385,305],[420,315],[450,325],[475,340],[490,360],[490,385],[480,405],[460,420],[440,430],[420,440],[410,460],[420,475],[445,480],[470,475],[490,460],[505,440],[510,415],[500,395],[485,375],[480,355],[490,335],[505,320],[520,310],[535,325],[540,345],[535,365],[520,385],[510,405],[510,425],[520,445],[540,455],[560,450],[575,435],[575,415],[560,395],[545,375],[540,355],[550,335],[565,320],[580,335],[580,355],[570,375],[555,390],[550,410],[555,430],[565,445],[580,435],[595,415],[600,395],[590,375],[580,355],// small intestine coils
+      [440,500],[420,520],[395,536],[375,556],[370,580],[380,600],// large intestine
+      [395,618]
+    ];
+    if(p>=1) return path[path.length-1];
+    let idx=Math.floor(p*(path.length-1));
+    let frac=p*(path.length-1)-idx;
+    if(idx>=path.length-1) return path[path.length-1];
+    return [path[idx][0]*(1-frac)+path[idx+1][0]*frac, path[idx][1]*(1-frac)+path[idx+1][1]*frac];
+  }
+  draw(now){
+    let p=((now-this.startT)*0.0018)%1;
+    let [x,y]=this.getPos(p);
+    ctx.save();
+    ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(x,y,this.r,0,Math.PI*2); ctx.fill();
+    // tiny trail
+    for(let i=1;i<=3;i++){
+      let tp=Math.max(0,p-i*0.02);
+      let [tx2,ty2]=this.getPos(tp);
+      ctx.globalAlpha=(4-i)/8;
+      ctx.beginPath(); ctx.arc(tx2,ty2,this.r*(1-i*0.2),0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+const boli=[new Bolus(0), new Bolus(1200), new Bolus(2600)];
+
+// Draw the full digestive system anatomically
+function drawSystem(pulse){
+  // --- Esophagus ---
+  ctx.strokeStyle='#ef9a9a'; ctx.lineWidth=16; ctx.lineCap='round';
+  ctx.shadowColor='#e53935'; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.moveTo(340,80); ctx.lineTo(340,235); ctx.stroke();
+  ctx.strokeStyle='rgba(255,200,200,0.2)'; ctx.lineWidth=8;
+  ctx.beginPath(); ctx.moveTo(340,80); ctx.lineTo(340,235); ctx.stroke();
+
+  // --- Stomach ---
+  ctx.save(); ctx.translate(320,315);
+  let sg=ctx.createRadialGradient(-20,-30,8,0,0,80);
+  sg.addColorStop(0,'#ef6c00bb'); sg.addColorStop(0.7,'#e65100aa'); sg.addColorStop(1,'#bf360c88');
+  ctx.fillStyle=sg; ctx.shadowColor='#ff8a65'; ctx.shadowBlur=20+pulse*8;
+  ctx.beginPath();
+  ctx.moveTo(-15,-75); ctx.bezierCurveTo(-95,-80,-105,55,-55,80);
+  ctx.bezierCurveTo(-10,100,55,65,45,-5);
+  ctx.bezierCurveTo(35,-65,5,-70,-15,-75);
+  ctx.fill();
+  // peristalsis wave
+  ctx.strokeStyle=`rgba(255,160,80,${0.3+Math.sin(t*3)*0.2})`;
+  ctx.lineWidth=2; ctx.setLineDash([5,4]);
+  for(let i=0;i<3;i++){
+    ctx.beginPath(); ctx.ellipse(-25,-30+i*30,35,12,0,0,Math.PI); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('STOMACH 🟠',0,105);
+  ctx.fillStyle='#ffccbc'; ctx.font='10px Segoe UI';
+  ctx.fillText('HCl + Pepsin + Churning',0,119);
+  ctx.restore();
+
+  // --- Small Intestine (coiled) ---
+  ctx.strokeStyle='#ff7043'; ctx.lineWidth=13; ctx.shadowColor='#e64a19'; ctx.shadowBlur=8+pulse*4;
+  const si_path=[[390,310],[430,320],[460,335],[475,360],[465,390],[445,410],[420,425],[410,448],[425,465],[452,470],[478,460],[494,440],[496,415],[482,393],[468,373],[468,348],[480,328],[500,318],[522,328],[533,350],[527,373],[512,395],[507,418],[515,440],[533,452],[552,447],[567,428],[566,405],[553,385],[542,362],[547,340],[562,325],[578,338],[581,360],[570,380],[555,395],[550,418],[558,440],[575,450]];
+  ctx.beginPath(); ctx.moveTo(si_path[0][0],si_path[0][1]);
+  si_path.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+  ctx.strokeStyle='rgba(255,150,100,0.15)'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.moveTo(si_path[0][0],si_path[0][1]);
+  si_path.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+
+  // --- Large Intestine ---
+  ctx.strokeStyle='#a1887f'; ctx.lineWidth=20; ctx.shadowColor='#795548'; ctx.shadowBlur=10+pulse*4;
+  const li=[[440,500],[415,518],[395,538],[378,558],[374,582],[385,602],[400,618]];
+  ctx.beginPath(); ctx.moveTo(li[0][0],li[0][1]);
+  li.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+  ctx.strokeStyle='rgba(200,170,160,0.15)'; ctx.lineWidth=10;
+  ctx.beginPath(); ctx.moveTo(li[0][0],li[0][1]);
+  li.forEach(([x,y])=>ctx.lineTo(x,y)); ctx.stroke();
+
+  // Anus
+  ctx.fillStyle='#6d4c41'; ctx.shadowColor='#a1887f'; ctx.shadowBlur=8+pulse*5;
+  ctx.beginPath(); ctx.arc(400,618,12,0,Math.PI*2); ctx.fill();
+}
+
+// Mouth
+function drawMouth(pulse){
+  ctx.save(); ctx.translate(340,65);
+  ctx.fillStyle='#c62828'; ctx.shadowColor='#ef9a9a'; ctx.shadowBlur=12+pulse*6;
+  ctx.beginPath(); ctx.ellipse(0,0,32,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff9c4';
+  for(let i=-3;i<=3;i++){ ctx.beginPath(); ctx.rect(i*8-3,-8,7,8); ctx.fill(); }
+  ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('👄 MOUTH',0,-28);
+  ctx.fillStyle='#ffcdd2'; ctx.font='10px Segoe UI';
+  ctx.fillText('Mastication + Saliva (Ptyalin)',0,-15);
+  ctx.restore();
+}
+
+// Accessory organs (detailed Std 8 level)
+function drawAccessory(pulse){
+  // Liver (right side anatomically = left of drawing)
+  ctx.save(); ctx.translate(205,295);
+  let g=ctx.createRadialGradient(-15,-15,5,0,0,55);
+  g.addColorStop(0,'#d84315cc'); g.addColorStop(1,'#8d2400cc');
+  ctx.fillStyle=g; ctx.shadowColor='#ff5722'; ctx.shadowBlur=15+pulse*5;
+  ctx.beginPath(); ctx.ellipse(0,0,65,35,-0.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('🟤 LIVER',0,50);
+  ctx.fillStyle='#ffccbc'; ctx.font='9px Segoe UI';
+  ctx.fillText('Bile → Gall Bladder',0,63);
+  // Bile duct
+  ctx.strokeStyle='rgba(255,150,50,0.5)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(45,10); ctx.quadraticCurveTo(80,100,295,310); ctx.stroke();
+  ctx.restore();
+
+  // Gall Bladder
+  ctx.save(); ctx.translate(228,355);
+  let g2=ctx.createRadialGradient(0,0,3,0,0,18);
+  g2.addColorStop(0,'#f57f17'); g2.addColorStop(1,'#e65100');
+  ctx.fillStyle=g2; ctx.shadowColor='#fdd835'; ctx.shadowBlur=10+pulse*4;
+  ctx.beginPath(); ctx.ellipse(0,0,18,12,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='9px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('Gall\nBladder',0,28);
+  ctx.restore();
+
+  // Pancreas
+  ctx.save(); ctx.translate(200,395);
+  let g3=ctx.createRadialGradient(0,0,3,0,0,40);
+  g3.addColorStop(0,'#fbc02d'); g3.addColorStop(1,'#f57f17');
+  ctx.fillStyle=g3; ctx.shadowColor='#ffca28'; ctx.shadowBlur=12+pulse*5;
+  ctx.beginPath(); ctx.ellipse(0,0,55,18,0.15,0,Math.PI*2); ctx.fill();
+  // Pancreatic duct
+  ctx.strokeStyle='rgba(255,220,50,0.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(50,8); ctx.quadraticCurveTo(90,60,295,315); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('🟡 PANCREAS',0,33);
+  ctx.fillStyle='#fff9c4'; ctx.font='9px Segoe UI';
+  ctx.fillText('Amylase+Lipase+Trypsin',0,46);
+  ctx.restore();
+}
+
+// Labels for intestines
+function drawIntestineLabels(){
+  ctx.fillStyle='#ff8a65'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='left';
+  ctx.fillText('SMALL INTESTINE',615,375);
+  ctx.fillStyle='#ffccbc'; ctx.font='10px Segoe UI';
+  ctx.fillText('Villi absorb nutrients 🔬',615,391);
+  ctx.fillStyle='rgba(255,150,100,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(614,380); ctx.lineTo(590,380); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle='#a1887f'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='left';
+  ctx.fillText('LARGE INTESTINE',614,530);
+  ctx.fillStyle='#d7ccc8'; ctx.font='10px Segoe UI';
+  ctx.fillText('Water reabsorption 💧',614,546);
+  ctx.strokeStyle='rgba(180,140,120,0.5)'; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(614,535); ctx.lineTo(450,535); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('ANUS 💩',400,645);
+  ctx.fillStyle='#d7ccc8'; ctx.font='9px Segoe UI';
+  ctx.fillText('Egestion of waste',400,657);
+}
+
+// Enzyme info panel
+function drawEnzymePanel(){
+  ctx.save();
+  ctx.fillStyle='rgba(8,3,2,0.9)'; ctx.shadowColor='#ff8a65'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.roundRect(630,80,240,160,12); ctx.fill();
+  ctx.strokeStyle='#ff8a65'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#ff8a65'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('🧪 DIGESTIVE ENZYMES',750,102);
+  const enzymes=[
+    ['Ptyalin (Saliva)','Starch → Maltose'],
+    ['Pepsin (Stomach)','Protein → Peptides'],
+    ['Trypsin (Pancr.)','Protein → Amino Acids'],
+    ['Lipase (Pancr.)','Fats → Fatty Acids'],
+    ['Bile (Liver)','Emulsifies Fats'],
+  ];
+  enzymes.forEach(([e,p],i)=>{
+    ctx.fillStyle='#fff'; ctx.font='bold 9px Segoe UI'; ctx.textAlign='left';
+    ctx.fillText(e,638,122+i*26);
+    ctx.fillStyle='#ffcc80'; ctx.font='9px Segoe UI';
+    ctx.fillText('→ '+p,638,134+i*26);
+  });
+  ctx.restore();
+}
+
+// Step flow cards
+const STEPS=[
+  {label:'① INGESTION',sub:'Mouth: Teeth chew\nSaliva digests starch',color:'#ef9a9a',x:120,y:580},
+  {label:'② DIGESTION',sub:'Stomach: acids +\nchurning action',color:'#ff8a65',x:310,y:580},
+  {label:'③ ABSORPTION',sub:'Small Intestine:\nvilli absorb nutrients',color:'#ffd54f',x:500,y:580},
+  {label:'④ ASSIMILATION',sub:'Blood carries food\nto body cells 🩸',color:'#80cbc4',x:690,y:580},
+];
+
+function drawStepCards(){
+  let cyc=(t%20)/20;
+  STEPS.forEach((s,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/STEPS.length))*6));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=160,bh=74,bx=s.x-bw/2,by=s.y-bh/2;
+    ctx.fillStyle='rgba(6,2,1,0.97)'; ctx.shadowColor=s.color; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=s.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(s.label,s.x,s.y-12);
+    ctx.fillStyle=s.color; ctx.font='10px Segoe UI';
+    s.sub.split('\n').forEach((l,li)=>ctx.fillText(l,s.x,s.y+6+li*14));
+    ctx.restore();
+  });
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#150a05'); g.addColorStop(1,'#060201');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(200,100,50,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#ff8a65'); g.addColorStop(0.5,'#ffd54f'); g.addColorStop(1,'#ff5252');
+  ctx.font='bold 30px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#e64a19'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🍕 HUMAN DIGESTIVE SYSTEM (Advanced) 💊',W/2,38);
+  ctx.font='13px Segoe UI'; ctx.fillStyle='rgba(255,200,160,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — Std 8 Level: Enzymes, Organs & Absorption',W/2,58);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2.5));
+  ctx.clearRect(0,0,W,H);
+  drawBg(); drawTitle();
+  drawSystem(pulse);
+  drawMouth(pulse);
+  drawAccessory(pulse);
+  drawIntestineLabels();
+  drawEnzymePanel();
+  boli.forEach(b=>b.draw(t*1000));
+  drawStepCards();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natural Numbers - Visual Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 950px;
+            height: 700px;
+            background: linear-gradient(to bottom, #FFFDE7 0%, #FFF9C4 100%);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 38px;
+            font-weight: bold;
+            color: #F57C00;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            z-index: 200;
+        }
+
+        /* Number Line */
+        .number-line {
+            position: absolute;
+            top: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 850px;
+            height: 8px;
+            background: linear-gradient(to right, #FF6F00, #FFA726);
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Number Points */
+        .number-point {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #FF9800, #F57C00);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 6px 15px rgba(245, 124, 0, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 4px solid white;
+        }
+
+        .number-point:hover {
+            transform: scale(1.2);
+            box-shadow: 0 8px 20px rgba(245, 124, 0, 0.6);
+        }
+
+        .number-point.highlighted {
+            animation: pulse 1s ease-in-out infinite;
+            background: radial-gradient(circle, #4CAF50, #2E7D32);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+        }
+
+        /* Info Cards */
+        .info-card {
+            position: absolute;
+            background: white;
+            padding: 18px 24px;
+            border-radius: 18px;
+            border: 4px solid #FF9800;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            font-size: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.5s ease;
+            z-index: 150;
+        }
+
+        .info-card.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #card1 {
+            top: 100px;
+            left: 60px;
+            color: #D84315;
+        }
+
+        #card2 {
+            top: 400px;
+            left: 80px;
+            color: #1976D2;
+        }
+
+        #card3 {
+            top: 100px;
+            right: 60px;
+            color: #388E3C;
+        }
+
+        #card4 {
+            bottom: 100px;
+            right: 80px;
+            color: #7B1FA2;
+        }
+
+        /* Visual Counter */
+        .counter-section {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .counter-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #F57C00;
+            margin-bottom: 15px;
+        }
+
+        .counter-display {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .counter-item {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #FF9800, #FF6F00);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(245, 124, 0, 0.3);
+            opacity: 0;
+            transform: scale(0);
+            animation: popIn 0.3s ease forwards;
+        }
+
+        @keyframes popIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Operation Display */
+        .operation {
+            position: absolute;
+            top: 500px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #1976D2;
+            background: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            border: 4px solid #2196F3;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        .operation.show {
+            display: block;
+            animation: fadeInScale 0.5s ease;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        /* Arrow Indicator */
+        .arrow {
+            position: absolute;
+            top: 180px;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid #FF5722;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        /* Property Box */
+        .property-box {
+            position: absolute;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 3px solid #1976D2;
+            font-size: 18px;
+            font-weight: bold;
+            color: #0D47A1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 600px;
+            text-align: center;
+            display: none;
+        }
+
+        .property-box.show {
+            display: block;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="animation-container">
+        <div class="title">🔢 NATURAL NUMBERS 1, 2, 3, 4, 5... 🔢</div>
+
+        <!-- Info Cards -->
+        <div id="card1" class="info-card">✨ Start from 1<br>(No zero!)</div>
+        <div id="card2" class="info-card">➕ Used for counting<br>objects</div>
+        <div id="card3" class="info-card">♾️ Go on forever<br>(Infinite)</div>
+        <div id="card4" class="info-card">📊 Always positive<br>numbers</div>
+
+        <!-- Number Line -->
+        <div class="number-line"></div>
+
+        <!-- Property Box -->
+        <div id="property-box" class="property-box"></div>
+
+        <!-- Operation Display -->
+        <div id="operation" class="operation"></div>
+
+        <!-- Counter Section -->
+        <div class="counter-section">
+            <div class="counter-title">🍎 Counting Objects:</div>
+            <div id="counter-display" class="counter-display"></div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('animation-container');
+        const numberLine = document.querySelector('.number-line');
+        const operationDiv = document.getElementById('operation');
+        const propertyBox = document.getElementById('property-box');
+        const counterDisplay = document.getElementById('counter-display');
+        const cards = ['card1', 'card2', 'card3', 'card4'];
+
+        let currentHighlight = 0;
+
+        // Create number points on the line
+        function createNumberLine() {
+            for (let i = 1; i <= 10; i++) {
+                const point = document.createElement('div');
+                point.className = 'number-point';
+                point.textContent = i;
+                point.style.top = '220px';
+                point.style.left = `${50 + (i - 1) * 85}px`;
+                point.dataset.number = i;
+                container.appendChild(point);
+            }
+        }
+
+        // Highlight numbers sequentially
+        function highlightSequence() {
+            const points = document.querySelectorAll('.number-point');
+            currentHighlight = (currentHighlight % points.length);
+
+            points.forEach(p => p.classList.remove('highlighted'));
+            points[currentHighlight].classList.add('highlighted');
+
+            // Show arrow
+            showArrow(currentHighlight);
+            currentHighlight++;
+        }
+
+        // Show arrow above number
+        function showArrow(index) {
+            const existingArrow = document.querySelector('.arrow');
+            if (existingArrow) existingArrow.remove();
+
+            const arrow = document.createElement('div');
+            arrow.className = 'arrow';
+            arrow.style.left = `${75 + index * 85}px`;
+            container.appendChild(arrow);
+        }
+
+        // Show counting objects
+        function showCounting(count) {
+            counterDisplay.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                setTimeout(() => {
+                    const item = document.createElement('div');
+                    item.className = 'counter-item';
+                    item.textContent = '🍎';
+                    item.style.animationDelay = `${i * 0.1}s`;
+                    counterDisplay.appendChild(item);
+                }, i * 200);
+            }
+        }
+
+        // Show math operations
+        function showOperation(operation) {
+            operationDiv.textContent = operation;
+            operationDiv.classList.add('show');
+            setTimeout(() => {
+                operationDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        // Show properties
+        function showProperty(text) {
+            propertyBox.textContent = text;
+            propertyBox.classList.add('show');
+            setTimeout(() => {
+                propertyBox.classList.remove('show');
+            }, 3500);
+        }
+
+        // Animate info cards
+        function animateCards() {
+            const timings = [500, 2000, 4000, 6000];
+            cards.forEach((cardId, index) => {
+                setTimeout(() => {
+                    document.getElementById(cardId).classList.add('active');
+                }, timings[index]);
+            });
+        }
+
+        // Main animation sequence
+        function runSequence() {
+            // Reset
+            cards.forEach(cardId => {
+                document.getElementById(cardId).classList.remove('active');
+            });
+            document.querySelectorAll('.number-point').forEach(p => p.classList.remove('highlighted'));
+
+            // Start animations
+            animateCards();
+
+            // Highlight numbers
+            setInterval(highlightSequence, 1200);
+
+            // Show operations
+            setTimeout(() => showOperation('3 + 2 = 5'), 8000);
+            setTimeout(() => showOperation('7 - 3 = 4'), 12000);
+            setTimeout(() => showOperation('2 × 4 = 8'), 16000);
+
+            // Show properties
+            setTimeout(() => showProperty('🔁 COMMUTATIVE: 2 + 3 = 3 + 2'), 20000);
+            setTimeout(() => showProperty('🔗 ASSOCIATIVE: (2 + 3) + 4 = 2 + (3 + 4)'), 24000);
+
+            // Show counting
+            setTimeout(() => showCounting(5), 28000);
+            setTimeout(() => showCounting(8), 32000);
+        }
+
+        // Initialize
+        createNumberLine();
+        runSequence();
+
+        // Loop
+        setInterval(runSequence, 36000);
+    </script>
+</body>
+
+</html>

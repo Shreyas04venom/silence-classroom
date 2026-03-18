@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algebraic Variables - Visual Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #283593 0%, #5C6BC0 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 950px;
+            height: 700px;
+            background: linear-gradient(to bottom, #E8EAF6 0%, #C5CAE9 100%);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 38px;
+            font-weight: bold;
+            color: #1A237E;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            z-index: 200;
+        }
+
+        .variable-box {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, #7E57C2, #5E35B1);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 10px 30px rgba(94, 53, 177, 0.4);
+            border: 5px solid white;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        .box-label {
+            font-size: 18px;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 14px;
+            border-radius: 10px;
+            color: #5E35B1;
+        }
+
+        #box-x {
+            top: 180px;
+            left: 100px;
+            animation-delay: 0s;
+        }
+
+        #box-y {
+            top: 180px;
+            right: 100px;
+            animation-delay: 1s;
+        }
+
+        #box-z {
+            bottom: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation-delay: 2s;
+        }
+
+        .equals {
+            position: absolute;
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF6F00;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        .example-box {
+            position: absolute;
+            top: 500px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px 35px;
+            border-radius: 20px;
+            border: 4px solid #5E35B1;
+            font-size: 28px;
+            font-weight: bold;
+            color: #1A237E;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            min-width: 500px;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 22px;
+            font-weight: bold;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 3px solid #5E35B1;
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 150;
+        }
+
+        .label.active {
+            opacity: 1;
+        }
+
+        #label1 {
+            top: 90px;
+            left: 70px;
+            color: #D84315;
+        }
+
+        #label2 {
+            top: 90px;
+            right: 70px;
+            color: #00897B;
+        }
+
+        #label3 {
+            bottom: 100px;
+            right: 70px;
+            color: #7B1FA2;
+        }
+
+        .info {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, #FFF9C4, #FFF59D);
+            padding: 15px;
+            border-radius: 15px;
+            border: 3px solid #F57C00;
+            max-width: 320px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .info h3 {
+            color: #E65100;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .info p {
+            color: #424242;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="animation-container">
+        <div class="title">📝 ALGEBRAIC VARIABLES (x, y, z) 📝</div>
+
+        <div id="label1" class="label">🔤 Variables are<br>UNKNOWN numbers</div>
+        <div id="label2" class="label">💡 Can represent<br>ANY value</div>
+        <div id="label3" class="label">🔄 Change in different<br>situations</div>
+
+        <div class="variable-box" id="box-x">
+            x
+            <div class="box-label">can be 5</div>
+        </div>
+
+        <div class="variable-box" id="box-y">
+            y
+            <div class="box-label">can be 12</div>
+        </div>
+
+        <div class="variable-box" id="box-z">
+            z
+            <div class="box-label">can be 8</div>
+        </div>
+
+        <div class="equals" style="top: 250px; left: 300px;">=</div>
+        <div class="equals" style="top: 250px; right: 300px;">=</div>
+
+        <div id="example-box" class="example-box"></div>
+
+        <div class="info">
+            <h3>🎯 What are Variables?</h3>
+            <p>Letters (x, y, z, a, b, c) that stand for numbers we don't know yet. Like mystery boxes waiting to be
+                opened!</p>
+        </div>
+    </div>
+
+    <script>
+        const labels = ['label1', 'label2', 'label3'];
+        const exampleBox = document.getElementById('example-box');
+
+        const examples = [
+            'x + 3 = 10  →  x = 7',
+            '2y = 14  →  y = 7',
+            'z - 4 = 5  →  z = 9',
+            'x + y = 15',
+            '3a = 12  →  a = 4'
+        ];
+
+        let exampleIndex = 0;
+
+        function showExample() {
+            exampleBox.textContent = examples[exampleIndex];
+            exampleIndex = (exampleIndex + 1) % examples.length;
+        }
+
+        function animateLabels() {
+            const timings = [500, 2000, 3500];
+            labels.forEach((id, i) => {
+                setTimeout(() => {
+                    document.getElementById(id).classList.add('active');
+                }, timings[i]);
+            });
+        }
+
+        function resetLabels() {
+            labels.forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+        }
+
+        // Update box values
+        function updateBoxValues() {
+            const boxes = [
+                { id: 'box-x', values: ['5', '10', '3', '7'] },
+                { id: 'box-y', values: ['12', '8', '15', '20'] },
+                { id: 'box-z', values: ['8', '6', '11', '9'] }
+            ];
+
+            boxes.forEach(box => {
+                const element = document.getElementById(box.id);
+                const label = element.querySelector('.box-label');
+                let idx = 0;
+
+                setInterval(() => {
+                    label.textContent = `can be ${box.values[idx]}`;
+                    idx = (idx + 1) % box.values.length;
+                }, 3000);
+            });
+        }
+
+        animateLabels();
+        showExample();
+        updateBoxValues();
+
+        setInterval(showExample, 3500);
+
+        setInterval(() => {
+            resetLabels();
+            setTimeout(animateLabels, 1000);
+        }, 18000);
+    </script>
+</body>
+
+</html>

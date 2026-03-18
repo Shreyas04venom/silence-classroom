@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equations - Balance Method</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #00796B, #26A69A);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #container {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            background: linear-gradient(to bottom, #E0F2F1, #B2DFDB);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #004D40;
+            text-align: center;
+            z-index: 200;
+        }
+
+        .balance {
+            position: absolute;
+            top: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+        }
+
+        .beam {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 15px;
+            background: linear-gradient(to right, #8D6E63, #6D4C41);
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .pivot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 8px);
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 50px solid #5D4037;
+        }
+
+        .pan {
+            position: absolute;
+            width: 180px;
+            height: 30px;
+            background: linear-gradient(to bottom, #FFA726, #FB8C00);
+            border-radius: 15px 15px 60px 60px;
+            border: 4px solid #E65100;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .pan.left {
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+        }
+
+        .pan.right {
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+        }
+
+        .weight {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #7E57C2, #5E35B1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(94, 53, 177, 0.4);
+        }
+
+        .equation {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #004D40;
+            background: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            border: 4px solid#00897B;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .step {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 3px solid #00897B;
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 150;
+        }
+
+        .step.active {
+            opacity: 1;
+        }
+
+        #step1 {
+            top: 80px;
+            left: 60px;
+            color: #D84315;
+        }
+
+        #step2 {
+            top: 520px;
+            left: 80px;
+            color: #1976D2;
+        }
+
+        #step3 {
+            top: 520px;
+            right: 80px;
+            color: #388E3C;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="title">⚖️ SOLVING EQUATIONS (Balance Method) ⚖️</div>
+        <div id="step1" class="step">1️⃣ Both sides must<br>be EQUAL (balanced)</div>
+        <div id="step2" class="step">2️⃣ Do the SAME thing<br>to both sides</div>
+        <div id="step3" class="step">3️⃣ Find the value of x<br>that balances</div>
+        <div class="balance">
+            <div class="pivot"></div>
+            <div class="beam" id="beam"></div>
+            <div class="pan left" id="pan-left"></div>
+            <div class="pan right" id="pan-right"></div>
+        </div>
+        <div class="equation" id="equation">x + 3 = 7</div>
+    </div>
+    <script>
+        const steps = ['step1', 'step2', 'step3'];
+        const eq = document.getElementById('equation');
+        const panL = document.getElementById('pan-left');
+        const panR = document.getElementById('pan-right');
+        const beam = document.getElementById('beam');
+        const equations = [
+            { text: 'x + 3 = 7', leftWeights: ['x', '3'], rightWeights: ['7'] },
+            { text: 'x = 4', leftWeights: ['x'], rightWeights: ['4'] },
+            { text: '2x = 10', leftWeights: ['2x'], rightWeights: ['10'] },
+            { text: 'x = 5', leftWeights: ['x'], rightWeights: ['5'] }
+        ];
+        let eqIdx = 0;
+        function showEquation() {
+            const e = equations[eqIdx];
+            eq.innerHTML = e.text.replace('x', '<span style="color:#7E57C2;">x</span>');
+            panL.innerHTML = '';
+            panR.innerHTML = '';
+            e.leftWeights.forEach((w, i) => {
+                const weight = document.createElement('div');
+                weight.className = 'weight';
+                weight.textContent = w;
+                weight.style.top = '-100px';
+                weight.style.left = (10 + i * 50) + 'px';
+                panL.appendChild(weight);
+            });
+            e.rightWeights.forEach((w, i) => {
+                const weight = document.createElement('div');
+                weight.className = 'weight';
+                weight.textContent = w;
+                weight.style.top = '-100px';
+                weight.style.left = (10 + i * 50) + 'px';
+                panR.appendChild(weight);
+            });
+            beam.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+            eqIdx = (eqIdx + 1) % equations.length;
+        }
+        function animateSteps() {
+            const timings = [500, 3000, 5500];
+            steps.forEach((id, i) => {
+                setTimeout(() => document.getElementById(id).classList.add('active'), timings[i]);
+            });
+        }
+        function resetSteps() {
+            steps.forEach(id => document.getElementById(id).classList.remove('active'));
+        }
+        animateSteps();
+        showEquation();
+        setInterval(showEquation, 4000);
+        setInterval(() => {
+            resetSteps();
+            setTimeout(animateSteps, 1000);
+        }, 18000);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecosystems - Animation (Std 8)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#071508 0%,#010301 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(100,220,100,0.3),0 0 200px rgba(50,150,50,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Birds moving across sky
+let birds=[];
+class Bird {
+  constructor(){
+    this.x=-30; this.y=60+Math.random()*80;
+    this.speed=1+Math.random()*2; this.flap=Math.random()*Math.PI*2;
+  }
+  update(){ this.x+=this.speed; this.flap+=0.15; if(this.x>W+30) this.x=-30; }
+  draw(){
+    ctx.save(); ctx.translate(this.x,this.y);
+    ctx.strokeStyle='rgba(200,230,255,0.7)'; ctx.lineWidth=2; ctx.lineCap='round';
+    let fw=Math.abs(Math.sin(this.flap))*12;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-8,-fw,-15,-fw*0.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(8,-fw,15,-fw*0.5); ctx.stroke();
+    ctx.restore();
+  }
+}
+for(let i=0;i<8;i++){ let b=new Bird(); b.x=Math.random()*W; birds.push(b); }
+
+// Falling leaves
+let leaves=[];
+class Leaf {
+  constructor(){
+    this.x=Math.random()*W; this.y=-20;
+    this.vy=0.5+Math.random()*1.5; this.vx=(Math.random()-0.5)*1;
+    this.rot=Math.random()*Math.PI*2; this.rv=0.03+Math.random()*0.04;
+    this.color=`hsl(${90+Math.random()*60},70%,${40+Math.random()*20}%)`;
+    this.size=6+Math.random()*8;
+  }
+  update(){ this.x+=this.vx+Math.sin(t+this.y*0.01)*0.3; this.y+=this.vy; this.rot+=this.rv; if(this.y>H) this.y=-20; }
+  draw(){
+    ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+    ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=3;
+    ctx.beginPath(); ctx.ellipse(0,0,this.size,this.size*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+for(let i=0;i<25;i++){ let l=new Leaf(); l.y=Math.random()*H; leaves.push(l); }
+
+// Energy flow arrows
+function drawEnergyArrow(x1,y1,x2,y2,color,label){
+  let dx=x2-x1, dy=y2-y1;
+  let len=Math.sqrt(dx*dx+dy*dy);
+  let nx=dx/len, ny=dy/len;
+  let gp=(t%4)/4; // moving progress
+  ctx.save();
+  // Animated dashes
+  ctx.strokeStyle=color; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.setLineDash([12,8]); ctx.lineDashOffset=-t*20;
+  ctx.shadowColor=color; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.moveTo(x1+nx*20,y1+ny*20); ctx.lineTo(x2-nx*25,y2-ny*25); ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrow head
+  let ax=x2-nx*25, ay=y2-ny*25;
+  let perp={x:-ny,y:nx};
+  ctx.fillStyle=color; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.moveTo(ax+nx*15,ay+ny*15); ctx.lineTo(ax+perp.x*7,ay+perp.y*7); ctx.lineTo(ax-perp.x*7,ay-perp.y*7); ctx.closePath(); ctx.fill();
+  if(label){
+    ctx.fillStyle='rgba(255,255,200,0.8)'; ctx.font='10px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(label,(x1+x2)/2,(y1+y2)/2-8);
+  }
+  ctx.restore();
+}
+
+// Organism node
+function drawOrganism(ox,oy,emoji,name,sublabel,color,size,pulse){
+  ctx.save(); ctx.translate(ox,oy);
+  let g=ctx.createRadialGradient(0,0,5,0,0,size);
+  g.addColorStop(0,color+'44'); g.addColorStop(1,color+'11');
+  ctx.fillStyle=g; ctx.shadowColor=color; ctx.shadowBlur=20+pulse*10;
+  ctx.beginPath(); ctx.arc(0,0,size,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+  ctx.font=`${size*0.7}px serif`; ctx.textAlign='center';
+  ctx.fillText(emoji,0,size*0.25);
+  ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.shadowBlur=0;
+  ctx.fillText(name,0,size+18);
+  ctx.fillStyle=color; ctx.font='10px Segoe UI';
+  ctx.fillText(sublabel,0,size+32);
+  ctx.restore();
+}
+
+// Sun energy
+function drawSunEnergy(pulse){
+  ctx.save(); ctx.translate(W/2,80);
+  // Rays
+  for(let i=0;i<10;i++){
+    let ang=i*Math.PI/5+t*0.2;
+    let len=35+Math.sin(t*2+i)*10;
+    ctx.strokeStyle=`rgba(255,240,50,${0.5+Math.sin(t+i)*0.2})`;
+    ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*40,Math.sin(ang)*40); ctx.lineTo(Math.cos(ang)*(40+len),Math.sin(ang)*(40+len)); ctx.stroke();
+  }
+  let g=ctx.createRadialGradient(-8,-8,5,0,0,40);
+  g.addColorStop(0,'#fff9c4'); g.addColorStop(0.6,'#ffee58'); g.addColorStop(1,'#f9a825');
+  ctx.fillStyle=g; ctx.shadowColor='#ffee58'; ctx.shadowBlur=30+pulse*10;
+  ctx.beginPath(); ctx.arc(0,0,40,0,Math.PI*2); ctx.fill();
+  ctx.font='24px serif'; ctx.textAlign='center'; ctx.fillText('☀️',0,8);
+  ctx.fillStyle='#fff9c4'; ctx.font='bold 13px Segoe UI'; ctx.shadowBlur=0;
+  ctx.fillText('SOLAR ENERGY',0,58);
+  ctx.restore();
+}
+
+// Soil nutrients flowing up
+function drawNutrientCycle(){
+  ctx.save();
+  ctx.strokeStyle='rgba(139,90,43,0.5)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+  ctx.lineDashOffset=t*10;
+  ctx.beginPath(); ctx.moveTo(90,H-30); ctx.bezierCurveTo(60,400,80,200,W/2-50,200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(810,H-30); ctx.bezierCurveTo(840,400,820,200,W/2+50,200); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(200,160,80,0.7)'; ctx.font='10px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('Nutrient Cycle ♻️',W/2,H-15);
+  ctx.restore();
+}
+
+// Background - sky, land, water zones
+function drawBg(pulse){
+  // Sky
+  let skyG=ctx.createLinearGradient(0,0,0,300);
+  skyG.addColorStop(0,'#071a2e'); skyG.addColorStop(1,'#0d2a15');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,300);
+  // Land
+  let landG=ctx.createLinearGradient(0,300,0,H);
+  landG.addColorStop(0,'#1b3a10'); landG.addColorStop(0.3,'#2e5a18'); landG.addColorStop(1,'#3e2a0a');
+  ctx.fillStyle=landG; ctx.fillRect(0,300,W,H-300);
+  // Water body
+  let waterG=ctx.createLinearGradient(600,350,600,520);
+  waterG.addColorStop(0,`rgba(20,80,140,${0.8+Math.sin(t)*0.1})`); waterG.addColorStop(1,'rgba(10,50,100,0.9)');
+  ctx.fillStyle=waterG;
+  ctx.beginPath(); ctx.ellipse(680,440,120,70,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(100,180,255,0.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(680,440,120,70,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(100,180,255,0.7)'; ctx.font='11px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('🌊 WATER BODY',680,520);
+  // Grid
+  ctx.strokeStyle='rgba(80,150,80,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+// Abiotic factors panel
+function drawAbioticFactors(){
+  ctx.save();
+  let factors=[['☀️','Sunlight'],['🌡️','Temp'],['💧','Water'],['🌬️','Air'],['⛰️','Soil']];
+  let px=80, py=190;
+  ctx.fillStyle='rgba(2,10,5,0.85)'; ctx.shadowColor='#4caf50'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.roundRect(px-10,py-15,185,100,10); ctx.fill();
+  ctx.strokeStyle='#4caf50'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#a5d6a7'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('ABIOTIC FACTORS',px+82,py+2);
+  factors.forEach(([e,l],i)=>{
+    let fx=px+15+i*35, fy=py+20;
+    ctx.font='16px serif'; ctx.textAlign='center'; ctx.fillText(e,fx,fy+10);
+    ctx.fillStyle='rgba(180,255,180,0.7)'; ctx.font='8px Segoe UI';
+    ctx.fillText(l,fx,fy+26);
+  });
+  ctx.restore();
+}
+
+const CARDS=[
+  {label:'① Ecosystem',sub:'Living (Biotic) +\nNon-living (Abiotic) 🌍',color:'#81c784',x:150,y:600},
+  {label:'② Producers 🌿',sub:'Plants make food\nfrom sunlight',color:'#69f0ae',x:350,y:600},
+  {label:'③ Consumers 🐟',sub:'Animals eat other\norganisms for energy',color:'#ffd54f',x:550,y:600},
+  {label:'④ Decomposers 🍄',sub:'Break dead matter\ninto nutrients ♻️',color:'#ffcc80',x:760,y:600},
+];
+
+function drawCards(){
+  let cyc=(t%20)/20;
+  CARDS.forEach((c,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/CARDS.length))*6));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=155,bh=76,bx=c.x-bw/2,by=c.y-bh/2;
+    ctx.fillStyle='rgba(1,5,2,0.97)'; ctx.shadowColor=c.color; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=c.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(c.label,c.x,c.y-14);
+    ctx.fillStyle=c.color; ctx.font='10px Segoe UI';
+    c.sub.split('\n').forEach((l,li)=>ctx.fillText(l,c.x,c.y+4+li*14));
+    ctx.restore();
+  });
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#69f0ae'); g.addColorStop(0.5,'#ffd54f'); g.addColorStop(1,'#40c4ff');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#388e3c'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🌍 ECOSYSTEMS 🌱',W/2,40);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(180,255,180,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — The Web of Life',W/2,62);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2));
+  ctx.clearRect(0,0,W,H);
+  drawBg(pulse);
+  drawTitle();
+  drawSunEnergy(pulse);
+  drawNutrientCycle();
+
+  // Organisms: Producer → Herbivore → Carnivore → Decomposer
+  drawOrganism(200,360,'🌳','TREE\n(Producer)','Makes food from sun',  '#69f0ae',45,pulse);
+  drawOrganism(360,340,'🐛','CATERPILLAR\n(Herbivore)','Eats plants',  '#ffd54f',38,pulse);
+  drawOrganism(500,320,'🐦','BIRD\n(Carnivore)','Eats caterpillars',  '#80cbc4',38,pulse);
+  drawOrganism(440,460,'🍄','MUSHROOM\n(Decomposer)','Breaks dead matter', '#ffcc80',35,pulse);
+
+  // Energy arrows
+  drawEnergyArrow(240,360,330,345,'#ffd54f','Energy ⚡');
+  drawEnergyArrow(395,340,470,330,'#80cbc4','Energy ⚡');
+  drawEnergyArrow(500,355,465,455,'rgba(255,180,80,0.7)','Decay');
+  drawEnergyArrow(W/2,110,200,320,'rgba(255,240,60,0.6)','Sunlight');
+
+  // Fish in water
+  ctx.font='28px serif'; ctx.textAlign='center';
+  ctx.fillText('🐟',640,440); ctx.fillText('🐠',720,450); ctx.fillText('🦋',300,260);
+
+  // Abiotic factors
+  drawAbioticFactors();
+
+  birds.forEach(b=>{ b.update(); b.draw(); });
+  leaves.forEach(l=>{ l.update(); l.draw(); });
+
+  // Food chain label
+  ctx.save();
+  ctx.fillStyle='rgba(2,10,5,0.8)'; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.roundRect(90,90,310,50,10); ctx.fill();
+  ctx.strokeStyle='#69f0ae'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('FOOD CHAIN: Sun → Plants → Herbivores → Carnivores',245,112);
+  ctx.fillStyle='#a5d6a7'; ctx.font='10px Segoe UI';
+  ctx.fillText('Energy flows in ONE direction ➡️',245,130);
+  ctx.restore();
+
+  drawCards();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

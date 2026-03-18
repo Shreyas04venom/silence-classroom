@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circulatory System - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:radial-gradient(ellipse,#1a0010,#080005); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { border-radius:20px; box-shadow:0 0 80px rgba(255,50,80,0.4); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d');
+cv.width=900; cv.height=680;
+const W=900,H=680;
+let t=0;
+
+// Blood cells traveling along paths
+class BloodCell {
+  constructor(path,color,speed,size){
+    this.path=path; this.color=color; this.speed=speed; this.size=size;
+    this.progress=Math.random(); this.pulse=Math.random()*Math.PI*2;
+  }
+  getPos(p){
+    let idx=Math.floor(p*(this.path.length-1));
+    let frac=p*(this.path.length-1)-idx;
+    if(idx>=this.path.length-1) return this.path[this.path.length-1];
+    let a=this.path[idx],b=this.path[idx+1];
+    return {x:a.x+(b.x-a.x)*frac, y:a.y+(b.y-a.y)*frac};
+  }
+  update(){ this.progress=(this.progress+this.speed)%1; this.pulse+=0.08; }
+  draw(){
+    let pos=this.getPos(this.progress);
+    let r=this.size*(1+Math.sin(this.pulse)*0.1);
+    ctx.save();
+    let g=ctx.createRadialGradient(pos.x-r*0.3,pos.y-r*0.3,0.5,pos.x,pos.y,r);
+    g.addColorStop(0,'rgba(255,255,255,0.7)'); g.addColorStop(0.4,this.color); g.addColorStop(1,this.color.replace('0.9','0.3'));
+    ctx.fillStyle=g; ctx.shadowColor=this.color; ctx.shadowBlur=this.size*3;
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,r,0,Math.PI*2); ctx.fill();
+    // Donut shape for RBC
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,r*0.45,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Artery path (right side, red)
+const artPath=[{x:445,y:250},{x:445,y:220},{x:350,y:200},{x:270,y:230},{x:230,y:290},{x:210,y:350},{x:220,y:420},{x:270,y:480},{x:340,y:520}];
+// Vein path (left side, blue)
+const veinPath=[{x:340,y:520},{x:400,y:540},{x:450,y:560},{x:510,y:540},{x:560,y:520},{x:600,y:470},{x:620,y:400},{x:610,y:330},{x:570,y:270},{x:500,y:230},{x:455,y:220},{x:455,y:250}];
+// Pulmonary path
+const pulmPath=[{x:445,y:270},{x:445,y:200},{x:420,y:160},{x:380,y:145},{x:360,y:155},{x:355,y:175}];
+const pulmPath2=[{x:355,y:175},{x:385,y:170},{x:420,y:180},{x:445,y:200},{x:455,y:240},{x:455,y:270}];
+
+const cells=[];
+for(let i=0;i<14;i++) cells.push(new BloodCell(artPath,'rgba(255,80,80,0.9)',0.004+Math.random()*0.003,5+Math.random()*3));
+for(let i=0;i<14;i++) cells.push(new BloodCell(veinPath,'rgba(80,120,255,0.9)',0.004+Math.random()*0.003,5+Math.random()*3));
+for(let i=0;i<6;i++) cells.push(new BloodCell(pulmPath,'rgba(100,220,255,0.9)',0.007,4));
+for(let i=0;i<6;i++) cells.push(new BloodCell(pulmPath2,'rgba(255,80,80,0.9)',0.007,4));
+
+let sparks=[];
+class Spark {
+  constructor(x,y,c){ this.x=x; this.y=y; this.vx=(Math.random()-0.5)*5; this.vy=(Math.random()-0.5)*5; this.r=Math.random()*3+1; this.c=c; this.life=0.8+Math.random()*0.5; }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vx*=0.93; this.vy*=0.93; this.life-=0.02; }
+  draw(){ ctx.save(); ctx.globalAlpha=this.life; ctx.fillStyle=this.c; ctx.shadowColor=this.c; ctx.shadowBlur=8; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H*0.4,50,W/2,H/2,550);
+  g.addColorStop(0,'#2a0015'); g.addColorStop(0.5,'#14000a'); g.addColorStop(1,'#080005');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+function drawVesselPath(path,color,width,glow){
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=width; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor=glow; ctx.shadowBlur=18;
+  ctx.beginPath(); ctx.moveTo(path[0].x,path[0].y);
+  for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x,path[i].y);
+  ctx.stroke();
+  // Inner highlight
+  ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=width*0.4; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(path[0].x-2,path[0].y); for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x-2,path[i].y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHeart(cx,cy,scale,beat){
+  ctx.save();
+  let s=scale*(1+beat*0.08);
+  ctx.translate(cx,cy); ctx.scale(s,s);
+  // Outer glow
+  ctx.shadowColor='#ff1744'; ctx.shadowBlur=60;
+  // Heart shape using bezier
+  let g=ctx.createRadialGradient(-10,-15,5,0,0,65);
+  g.addColorStop(0,'#ff6090'); g.addColorStop(0.5,'#f01050'); g.addColorStop(1,'#8b0020');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.moveTo(0,15);
+  ctx.bezierCurveTo(-5,10,-55,-10,-50,-45);
+  ctx.bezierCurveTo(-45,-80,0,-75,0,-50);
+  ctx.bezierCurveTo(0,-75,45,-80,50,-45);
+  ctx.bezierCurveTo(55,-10,5,10,0,15);
+  ctx.fill();
+  // Inner chamber lines
+  ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=2; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.moveTo(0,-45); ctx.lineTo(0,10); ctx.stroke();
+  // Highlight
+  ctx.fillStyle='rgba(255,150,170,0.3)';
+  ctx.beginPath(); ctx.ellipse(-20,-35,15,20,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawLungs(pulse){
+  // Left lung
+  ctx.save();
+  let g=ctx.createRadialGradient(310,175,5,310,185,65);
+  g.addColorStop(0,'#90caf9'); g.addColorStop(0.6,'#42a5f5'); g.addColorStop(1,'#1565c0');
+  ctx.fillStyle=g; ctx.shadowColor='#64b5f6'; ctx.shadowBlur=20+pulse*8;
+  ctx.beginPath(); ctx.ellipse(300,185,52,75,-0.1,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(200,235,255,0.25)';
+  ctx.beginPath(); ctx.ellipse(285,165,18,30,0,0,Math.PI*2); ctx.fill();
+  // Right lung
+  let g2=ctx.createRadialGradient(600,175,5,600,185,65);
+  g2.addColorStop(0,'#90caf9'); g2.addColorStop(0.6,'#42a5f5'); g2.addColorStop(1,'#1565c0');
+  ctx.fillStyle=g2; ctx.shadowBlur=20+pulse*8;
+  ctx.beginPath(); ctx.ellipse(605,185,55,75,0.1,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(200,235,255,0.25)';
+  ctx.beginPath(); ctx.ellipse(620,165,20,30,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawOrgans(){
+  const organs=[
+    {x:240,y:395,w:55,h:35,color:'#a5d6a7',glow:'#4caf50',label:'🫁 Lungs',label2:'Get O₂'},
+    {x:660,y:395,w:60,h:35,color:'#ce93d8',glow:'#ab47bc',label:'🧠 Brain',label2:'Uses O₂'},
+    {x:445,y:530,w:65,h:35,color:'#ffcc80',glow:'#ff9800',label:'🦵 Body',label2:'All Organs'},
+  ];
+  organs.forEach(o=>{
+    ctx.save();
+    let gr=ctx.createRadialGradient(o.x-10,o.y-10,3,o.x,o.y,Math.max(o.w,o.h));
+    gr.addColorStop(0,'rgba(255,255,255,0.2)'); gr.addColorStop(0.4,o.color); gr.addColorStop(1,o.glow.replace('#','rgba(').replace(/([0-9a-f]{2})/gi,m=>parseInt(m,16)+',')+'0.5)');
+    ctx.fillStyle=o.color; ctx.shadowColor=o.glow; ctx.shadowBlur=22;
+    ctx.beginPath(); ctx.ellipse(o.x,o.y,o.w,o.h,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(o.label,o.x,o.y); ctx.font='10px Segoe UI'; ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.fillText(o.label2,o.x,o.y+15);
+    ctx.restore();
+  });
+}
+
+const LABELS=[
+  {text:'❤️ HEART',sub:'Pumps Blood',color:'#ff5252',x:560,y:260},
+  {text:'🔴 ARTERIES',sub:'Oxygen-rich Blood',color:'#ff5252',x:195,y:350},
+  {text:'🔵 VEINS',sub:'Return to Heart',color:'#448aff',x:685,y:380},
+  {text:'🫁 LUNGS',sub:'Get Fresh O₂',color:'#40c4ff',x:445,y:138},
+];
+
+function drawLabels(cycleT){
+  LABELS.forEach((l,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cycleT-(i*0.18))*5));
+    if(alpha<=0) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=170,bh=52,bx=l.x-bw/2,by=l.y-bh/2;
+    ctx.shadowColor=l.color; ctx.shadowBlur=18;
+    ctx.fillStyle='rgba(10,0,15,0.95)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=l.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText(l.text,l.x,l.y-2);
+    ctx.font='11px Segoe UI'; ctx.fillStyle=l.color; ctx.fillText(l.sub,l.x,l.y+16);
+    ctx.restore();
+  });
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#ff5252'); g.addColorStop(0.5,'#ff80ab'); g.addColorStop(1,'#ff5252');
+  ctx.shadowColor='#ff1744'; ctx.shadowBlur=30;
+  ctx.font='bold 33px Segoe UI'; ctx.fillStyle=g; ctx.textAlign='center';
+  ctx.fillText('❤️ CIRCULATORY SYSTEM ❤️',W/2,44);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(255,180,190,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — Blood Journey Through Your Body',W/2,66);
+  ctx.restore();
+}
+
+function drawInfoPanel(cycleT){
+  ctx.save(); ctx.globalAlpha=0.92;
+  let steps=['Heart Pumps Blood','Arteries Carry O₂ Blood','O₂ Delivered to Organs','CO₂ Returned via Veins','Blood Goes to Lungs','Cycle Repeats Non-Stop!'];
+  let px=20,py=420,pw=155,ph=220;
+  ctx.fillStyle='rgba(20,0,12,0.95)'; ctx.shadowColor='#ff1744'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.roundRect(px,py,pw,ph,12); ctx.fill();
+  ctx.strokeStyle='rgba(255,50,80,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#ff5252'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='left'; ctx.shadowBlur=0;
+  ctx.fillText('HOW IT WORKS:',px+10,py+22);
+  steps.forEach((s,i)=>{
+    let done=cycleT>(i/steps.length+0.12);
+    ctx.fillStyle=done?'#ff8a80':'rgba(255,255,255,0.4)';
+    ctx.font=`${done?'bold ':' '}10px Segoe UI`;
+    ctx.fillText((done?'✓ ':'○ ')+s,px+10,py+42+i*28);
+  });
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let cycleT=(t%20)/20;
+  let beat=Math.pow(Math.abs(Math.sin(t*Math.PI*1.5)),8);
+  let pulse=Math.abs(Math.sin(t*2));
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+  drawLungs(pulse);
+  drawVesselPath(artPath,'rgba(220,50,50,0.6)',22,'#ff1744');
+  drawVesselPath(veinPath,'rgba(50,80,220,0.6)',20,'#1565c0');
+  drawVesselPath(pulmPath,'rgba(100,200,255,0.5)',12,'#29b6f6');
+  drawVesselPath(pulmPath2,'rgba(255,100,100,0.5)',12,'#ff5252');
+  drawOrgans();
+  drawHeart(445,285,1,beat);
+  cells.forEach(c=>{c.update();c.draw();});
+  if(beat>0.8&&Math.random()<0.3) sparks.push(new Spark(445+Math.random()*30-15,285+Math.random()*30-15,'#ff6090'));
+  sparks=sparks.filter(s=>s.life>0); sparks.forEach(s=>{s.update();s.draw();});
+  drawLabels(cycleT);
+  drawInfoPanel(cycleT);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

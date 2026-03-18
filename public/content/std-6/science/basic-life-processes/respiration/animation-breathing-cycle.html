@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Respiration - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:radial-gradient(ellipse,#001520,#000508); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { border-radius:20px; box-shadow:0 0 80px rgba(0,200,255,0.3); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d');
+cv.width=900; cv.height=680;
+const W=900,H=680;
+let t=0;
+
+class GasMolecule {
+  constructor(x,y,ox,type){ this.x=x; this.y=y; this.ox=ox; this.type=type; // 'o2' or 'co2'
+    this.vx=(Math.random()-0.5)*1.5; this.vy=(Math.random()-0.5)*1.5-0.5; this.r=5+Math.random()*3; this.life=1; this.decay=0.007+Math.random()*0.005; this.angle=Math.random()*Math.PI*2; this.spin=0.04*(Math.random()-0.5); }
+  update(){ this.x+=this.vx; this.y+=this.vy; if(this.ox){ this.y-=0.3; } this.vx*=0.99; this.life-=this.decay; this.angle+=this.spin; }
+  draw(){ if(this.life<=0) return;
+    let c=this.type==='o2'?'#29b6f6':'#ef9a9a';
+    ctx.save(); ctx.globalAlpha=this.life*0.85; ctx.translate(this.x,this.y); ctx.rotate(this.angle);
+    ctx.shadowColor=c; ctx.shadowBlur=10;
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+    if(this.type==='co2'){
+      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(this.r*1.5,0,this.r*0.7,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-this.r*1.5,0,this.r*0.7,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=c; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-this.r*2,0); ctx.lineTo(this.r*2,0); ctx.stroke();
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(-this.r*0.3,-this.r*0.3,this.r*0.35,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore(); }
+}
+
+let molecules=[];
+function spawnMolecule(breathing){
+  // breathing in: O2 from outside → lungs; breathing out: CO2 from lungs → outside
+  if(breathing){ // Breathing IN - O2
+    molecules.push(new GasMolecule(80+Math.random()*30,300+Math.random()*60,false,'o2'));
+    molecules.push(new GasMolecule(W-80-Math.random()*30,300+Math.random()*60,false,'o2'));
+  } else { // Breathing OUT - CO2
+    molecules.push(new GasMolecule(320+Math.random()*40,280+Math.random()*60,true,'co2'));
+    molecules.push(new GasMolecule(580+Math.random()*40,280+Math.random()*60,true,'co2'));
+  }
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H*0.45,0,W/2,H/2,520);
+  g.addColorStop(0,'#001e2e'); g.addColorStop(0.6,'#000d18'); g.addColorStop(1,'#000508');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+function drawPerson(){
+  ctx.save();
+  // Body
+  let bg=ctx.createLinearGradient(410,100,490,600);
+  bg.addColorStop(0,'#f5c5a0'); bg.addColorStop(1,'#e0a070');
+  ctx.fillStyle=bg; ctx.shadowColor='rgba(245,200,160,0.3)'; ctx.shadowBlur=15;
+  // Head
+  ctx.beginPath(); ctx.arc(450,120,55,0,Math.PI*2); ctx.fill();
+  // Torso
+  ctx.beginPath(); ctx.roundRect(398,175,104,250,15); ctx.fill();
+  // Arms (simple)
+  ctx.beginPath(); ctx.roundRect(355,175,42,160,10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(503,175,42,160,10); ctx.fill();
+  // Legs
+  ctx.beginPath(); ctx.roundRect(400,425,45,180,10); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(455,425,45,180,10); ctx.fill();
+  // Face
+  ctx.fillStyle='#333'; ctx.beginPath(); ctx.ellipse(435,112,7,9,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(465,112,7,9,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(437,110,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(467,110,3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawLungs(breathPhase){
+  let expand=Math.max(0,Math.sin(breathPhase))*0.25; // 0-0.25 extra scale
+  ctx.save();
+  // Shadow/depth
+  ctx.shadowColor='rgba(41,182,246,0.4)'; ctx.shadowBlur=25+expand*20;
+  // Left lung
+  let lx=380,ly=290,lrx=62*(1+expand),lry=88*(1+expand);
+  let lg=ctx.createRadialGradient(lx-15,ly-15,5,lx,ly,lrx);
+  lg.addColorStop(0,'#80deea'); lg.addColorStop(0.5,'#0097a7'); lg.addColorStop(1,'#006064');
+  ctx.fillStyle=lg; ctx.beginPath(); ctx.ellipse(lx,ly,lrx,lry,0,0,Math.PI*2); ctx.fill();
+  // Inner highlight
+  ctx.fillStyle='rgba(200,245,255,0.2)'; ctx.beginPath(); ctx.ellipse(lx-lrx*0.3,ly-lry*0.3,lrx*0.28,lry*0.2,0,0,Math.PI*2); ctx.fill();
+  // Right lung
+  let rx=520,ry=290,rrx=65*(1+expand),rry=88*(1+expand);
+  let rg=ctx.createRadialGradient(rx+15,ry-15,5,rx,ry,rrx);
+  rg.addColorStop(0,'#80deea'); rg.addColorStop(0.5,'#0097a7'); rg.addColorStop(1,'#006064');
+  ctx.fillStyle=rg; ctx.beginPath(); ctx.ellipse(rx,ry,rrx,rry,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(200,245,255,0.2)'; ctx.beginPath(); ctx.ellipse(rx+rrx*0.3,ry-rry*0.3,rrx*0.28,rry*0.2,0,0,Math.PI*2); ctx.fill();
+  // Bronchi tubes
+  ctx.strokeStyle='#00acc1'; ctx.lineWidth=14; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(450,210); ctx.lineTo(450,255); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(450,255); ctx.lineTo(lx,ly-lry+20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(450,255); ctx.lineTo(rx,ry-rry+20); ctx.stroke();
+  ctx.restore();
+}
+
+function drawDiaphragm(breathPhase){
+  let yOff=Math.sin(breathPhase)*15;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,200,100,0.7)'; ctx.lineWidth=6; ctx.lineCap='round';
+  ctx.shadowColor='#ffab40'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.moveTo(370,395+yOff); ctx.quadraticCurveTo(450,375+yOff,530,395+yOff); ctx.stroke();
+  ctx.fillStyle='rgba(255,180,80,0.12)'; ctx.fill();
+  ctx.restore();
+}
+
+function drawBreathArrows(breathPhase){
+  let bIn=Math.sin(breathPhase)>0; // breathing in
+  ctx.save(); ctx.setLineDash([12,8]);
+  if(bIn){
+    // Arrows pointing INWARD (O2 in)
+    let alpha=Math.max(0,Math.sin(breathPhase));
+    ctx.globalAlpha=alpha*0.85;
+    ctx.strokeStyle='#29b6f6'; ctx.lineWidth=4; ctx.lineDashOffset=-t*40;
+    ctx.shadowColor='#29b6f6'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.moveTo(90,300); ctx.lineTo(330,300); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(810,300); ctx.lineTo(570,300); ctx.stroke();
+    // Arrow heads
+    ctx.setLineDash([]); ctx.globalAlpha=alpha;
+    ctx.fillStyle='#29b6f6'; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.moveTo(330,300); ctx.lineTo(315,292); ctx.lineTo(315,308); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(570,300); ctx.lineTo(585,292); ctx.lineTo(585,308); ctx.closePath(); ctx.fill();
+  } else {
+    // Arrows pointing OUT (CO2 out)
+    let alpha=Math.max(0,-Math.sin(breathPhase));
+    ctx.globalAlpha=alpha*0.85;
+    ctx.strokeStyle='#ef9a9a'; ctx.lineWidth=4; ctx.lineDashOffset=t*40;
+    ctx.shadowColor='#f44336'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.moveTo(330,300); ctx.lineTo(90,300); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(570,300); ctx.lineTo(810,300); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=alpha;
+    ctx.fillStyle='#ef9a9a'; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.moveTo(90,300); ctx.lineTo(105,292); ctx.lineTo(105,308); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(810,300); ctx.lineTo(795,292); ctx.lineTo(795,308); ctx.closePath(); ctx.fill();
+  }
+  ctx.setLineDash([]); ctx.restore();
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#29b6f6'); g.addColorStop(0.5,'#80deea'); g.addColorStop(1,'#29b6f6');
+  ctx.font='bold 33px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#0097a7'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('💨 RESPIRATION 💨',W/2,44);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(150,230,255,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How We Breathe & Get Energy',W/2,66);
+  ctx.restore();
+}
+
+function drawLabels(cycleT){
+  const labels=[
+    {text:'① BREATHING IN',sub:'O₂ Enters Lungs',c:'#29b6f6',x:165,y:155},{text:'② LUNGS EXPAND',sub:'Fill with Oxygen',c:'#80deea',x:450,y:140},
+    {text:'③ O₂ → BLOOD',sub:'Absorbed to Bloodstream',c:'#69f0ae',x:700,y:225},{text:'④ CELLS GET O₂',sub:'Energy Made ⚡',c:'#ffeb3b',x:700,y:340},
+    {text:'⑤ CO₂ MADE',sub:'Waste Gas Produced',c:'#ffab40',x:700,y:450},{text:'⑥ BREATHING OUT',sub:'CO₂ Released',c:'#ef9a9a',x:165,y:460},
+  ];
+  labels.forEach((l,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cycleT-(i*0.14))*6));
+    if(alpha<=0) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=190,bh=50,bx=l.x-bw/2,by=l.y-bh/2;
+    ctx.shadowColor=l.c; ctx.shadowBlur=14;
+    ctx.fillStyle='rgba(0,8,16,0.95)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=l.c; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(l.text,l.x,l.y-2); ctx.font='10px Segoe UI'; ctx.fillStyle=l.c;
+    ctx.fillText(l.sub,l.x,l.y+15); ctx.restore();
+  });
+}
+
+function drawEquation(){
+  ctx.save(); ctx.globalAlpha=0.9;
+  let bx=20,by=520,bw=250,bh=100;
+  ctx.fillStyle='rgba(0,10,20,0.95)'; ctx.shadowColor='#29b6f6'; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,12); ctx.fill();
+  ctx.strokeStyle='#0097a7'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.shadowBlur=0; ctx.fillStyle='#e0f7fa'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('AEROBIC RESPIRATION:',bx+bw/2,by+24);
+  ctx.font='bold 11px Segoe UI'; ctx.fillStyle='#80deea';
+  ctx.fillText('O₂ + Glucose → CO₂ + H₂O + Energy',bx+bw/2,by+48);
+  ctx.font='12px Segoe UI'; ctx.fillStyle='rgba(150,220,235,0.75)';
+  ctx.fillText('⚡ Powers ALL body activities!',bx+bw/2,by+72);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let cycleT=(t%22)/22;
+  let breathPhase=t*1.2; // breath cycle
+  let bIn=Math.sin(breathPhase)>0;
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+  drawPerson();
+  drawLungs(breathPhase);
+  drawDiaphragm(breathPhase);
+  drawBreathArrows(breathPhase);
+  // Spawn molecules
+  if(Math.random()<0.06){ spawnMolecule(bIn); }
+  molecules=molecules.filter(m=>m.life>0); molecules.forEach(m=>{m.update();m.draw();});
+  drawLabels(cycleT);
+  drawEquation();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

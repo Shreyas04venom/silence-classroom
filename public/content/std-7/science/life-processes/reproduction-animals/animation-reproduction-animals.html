@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reproduction in Animals - Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#0d0a1f 0%,#030108 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(180,100,255,0.3),0 0 200px rgba(100,80,200,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Sperm particles
+let sperms=[];
+class Sperm {
+  constructor(){
+    let ang=Math.random()*Math.PI*2;
+    let r=120+Math.random()*80;
+    this.x=440+Math.cos(ang)*r;
+    this.y=280+Math.sin(ang)*r;
+    this.tx=440; this.ty=280;
+    this.prog=0; this.speed=0.006+Math.random()*0.006;
+    this.tailT=Math.random()*Math.PI*2;
+  }
+  update(){ this.prog+=this.speed; this.tailT+=0.2; }
+  draw(){
+    if(this.prog>=1) return;
+    let x=this.x*(1-this.prog)+this.tx*this.prog;
+    let y=this.y*(1-this.prog)+this.ty*this.prog;
+    let ang=Math.atan2(this.ty-this.y,this.tx-this.x);
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.strokeStyle='rgba(255,180,255,0.8)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      ctx.beginPath(); ctx.moveTo(-6,0);
+      ctx.quadraticCurveTo(-12,Math.sin(this.tailT+i*1.5)*5,-18+i*2,Math.sin(this.tailT+i*1.5)*8);
+      ctx.stroke();
+    }
+    ctx.fillStyle='#ce93d8'; ctx.shadowColor='#ce93d8'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.ellipse(0,0,6,4,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Egg + fertilization
+function drawEgg(ex,ey,pulse,fertilized){
+  ctx.save(); ctx.translate(ex,ey);
+  let g=ctx.createRadialGradient(-8,-8,5,0,0,50);
+  if(!fertilized){
+    g.addColorStop(0,'#fff9c4'); g.addColorStop(0.7,'#f9a825'); g.addColorStop(1,'#e65100');
+  } else {
+    g.addColorStop(0,'#e8f5e9'); g.addColorStop(0.7,'#66bb6a'); g.addColorStop(1,'#1b5e20');
+  }
+  ctx.fillStyle=g;
+  ctx.shadowColor=fertilized?'#69f0ae':'#ffd54f'; ctx.shadowBlur=25+pulse*12;
+  ctx.beginPath(); ctx.arc(0,0,50,0,Math.PI*2); ctx.fill();
+  // Zona pellucida ring
+  ctx.strokeStyle=fertilized?'rgba(100,255,150,0.5)':'rgba(255,220,100,0.5)';
+  ctx.lineWidth=4; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.arc(0,0,58,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  // Nucleus
+  let ng=ctx.createRadialGradient(-5,-5,2,0,0,20);
+  ng.addColorStop(0,'rgba(255,255,255,0.8)'); ng.addColorStop(1,fertilized?'#1b5e20':'#6a1b9a');
+  ctx.fillStyle=ng; ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.arc(0,0,20,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 10px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(fertilized?'ZYGOTE':'EGG',0,4);
+  ctx.fillStyle=fertilized?'#69f0ae':'#ffd54f'; ctx.font='bold 12px Segoe UI';
+  ctx.fillText(fertilized?'✅ FERTILIZED!':'🥚 EGG CELL',0,75);
+  ctx.restore();
+}
+
+// Cell division animation
+function drawCellDivision(cx,cy,stage){
+  ctx.save(); ctx.translate(cx,cy);
+  let colors=['#81c784','#aed581','#c5e1a5','#dcedc8'];
+  if(stage===0){
+    ctx.fillStyle=colors[0]; ctx.shadowColor=colors[0]; ctx.shadowBlur=15;
+    ctx.beginPath(); ctx.arc(0,0,25,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='10px Segoe UI'; ctx.textAlign='center'; ctx.fillText('1 Cell',0,4);
+  } else if(stage===1){
+    [-18,18].forEach((dx,i)=>{
+      ctx.fillStyle=colors[i]; ctx.shadowColor=colors[i]; ctx.shadowBlur=12;
+      ctx.beginPath(); ctx.arc(dx,0,20,0,Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle='#fff'; ctx.font='9px Segoe UI'; ctx.textAlign='center'; ctx.fillText('2 Cells',0,35);
+  } else if(stage===2){
+    [[-18,-18],[18,-18],[-18,18],[18,18]].forEach(([dx,dy],i)=>{
+      ctx.fillStyle=colors[i]; ctx.shadowColor=colors[i]; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(dx,dy,14,0,Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle='#fff'; ctx.font='9px Segoe UI'; ctx.textAlign='center'; ctx.fillText('4 Cells',0,40);
+  } else {
+    for(let i=0;i<8;i++){
+      let a=i*Math.PI/4;
+      ctx.fillStyle=colors[i%4]; ctx.shadowColor=colors[i%4]; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(Math.cos(a)*18,Math.sin(a)*18,10,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle='#fff'; ctx.font='9px Segoe UI'; ctx.textAlign='center'; ctx.fillText('8 Cells',0,40);
+  }
+  ctx.restore();
+}
+
+// Development stages: egg → embryo → baby
+function drawDevelopment(){
+  let stage=Math.floor((t%16)/4);
+  ctx.fillStyle='rgba(180,140,255,0.8)'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('CELL DIVISION & DEVELOPMENT',550,160);
+  // Arrow line
+  ctx.strokeStyle='rgba(180,140,255,0.4)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(450,200); ctx.lineTo(680,200); ctx.stroke();
+  ctx.setLineDash([]);
+  // Stages
+  const stages=['Zygote','2 Cells','4 Cells','8 Cells→\nEmbryo'];
+  [460,510,565,625].forEach((sx,i)=>{
+    drawCellDivision(sx,200,i);
+    ctx.fillStyle='rgba(200,180,255,0.7)'; ctx.font='9px Segoe UI'; ctx.textAlign='center';
+    stages[i].split('\n').forEach((l,li)=>ctx.fillText(l,sx,248+li*12));
+  });
+  // Highlight current stage
+  ctx.strokeStyle=`rgba(255,200,255,${0.6+Math.sin(t*3)*0.4})`;
+  ctx.lineWidth=3; ctx.setLineDash([]);
+  let hx=[460,510,565,625][stage]||460;
+  ctx.beginPath(); ctx.arc(hx,200,40,0,Math.PI*2); ctx.stroke();
+}
+
+// Baby/offspring panel
+function drawOffspring(vx,vy,type,emoji,color,label){
+  ctx.save(); ctx.translate(vx,vy);
+  let g=ctx.createRadialGradient(0,-10,5,0,0,40);
+  g.addColorStop(0,color+'aa'); g.addColorStop(1,color+'44');
+  ctx.fillStyle=g; ctx.shadowColor=color; ctx.shadowBlur=20;
+  ctx.beginPath(); ctx.roundRect(-45,-55,90,80,12); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='32px serif'; ctx.textAlign='center'; ctx.fillText(emoji,0,-15);
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.shadowBlur=0;
+  ctx.fillText(label,0,20);
+  ctx.fillStyle=color; ctx.font='10px Segoe UI';
+  ctx.fillText(type,0,36);
+  ctx.restore();
+}
+
+const CARDS=[
+  {label:'① Sexual Reproduction',sub:'Male + Female gametes\ncombine to form new life',color:'#ce93d8',x:120,y:560},
+  {label:'② Egg + Sperm = Zygote',sub:'Fertilization happens\ninside or outside body',color:'#f48fb1',x:320,y:560},
+  {label:'③ Oviparous Animals',sub:'Lay eggs 🥚\nBird 🐦 Fish 🐟 Frog 🐸',color:'#80cbc4',x:520,y:560},
+  {label:'④ Viviparous Animals',sub:'Give birth to live young\nCow 🐄 Human 👶 Dog 🐕',color:'#ffcc80',x:730,y:560},
+];
+
+function drawCards(){
+  let cyc=(t%20)/20;
+  CARDS.forEach((c,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/CARDS.length))*6));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=160,bh=80,bx=c.x-bw/2,by=c.y-bh/2;
+    ctx.fillStyle='rgba(5,2,15,0.96)'; ctx.shadowColor=c.color; ctx.shadowBlur=15;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=c.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(c.label,c.x,c.y-14);
+    ctx.fillStyle=c.color; ctx.font='10px Segoe UI';
+    c.sub.split('\n').forEach((l,li)=>ctx.fillText(l,c.x,c.y+4+li*14));
+    ctx.restore();
+  });
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#0d0a1f'); g.addColorStop(1,'#030108');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(120,80,180,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#ce93d8'); g.addColorStop(0.5,'#f48fb1'); g.addColorStop(1,'#80deea');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#ab47bc'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🐣 REPRODUCTION IN ANIMALS 👶',W/2,40);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(200,160,255,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How Animals Produce Offspring',W/2,62);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2.5));
+  let fertilized=(Math.sin(t*0.5)>0);
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+
+  // Fertilization section
+  let fer=fertilized;
+  drawEgg(180,280,pulse,fer);
+  if(!fer && Math.random()<0.08) sperms.push(new Sperm());
+  // Oops, make sperm go to egg position
+  class Sperm2 {
+    constructor(){ let ang=Math.random()*Math.PI*2; let r=100+Math.random()*80;
+      this.x=180+Math.cos(ang)*r; this.y=280+Math.sin(ang)*r;
+      this.tx=180; this.ty=280; this.prog=0; this.speed=0.006+Math.random()*0.006; this.tailT=Math.random()*Math.PI*2; }
+    update(){ this.prog+=this.speed; this.tailT+=0.2; }
+    draw(){
+      if(this.prog>=1) return;
+      let x=this.x*(1-this.prog)+this.tx*this.prog;
+      let y=this.y*(1-this.prog)+this.ty*this.prog;
+      let ang=Math.atan2(this.ty-this.y,this.tx-this.x);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+      ctx.strokeStyle='rgba(255,180,255,0.8)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-6,0); ctx.quadraticCurveTo(-12,Math.sin(this.tailT)*5,-18,Math.sin(this.tailT)*8); ctx.stroke();
+      ctx.fillStyle='#ce93d8'; ctx.shadowColor='#ce93d8'; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.ellipse(0,0,6,4,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  if(!fer && Math.random()<0.08){ let s=new Sperm2(); sperms.push({upd:()=>s.update(),drw:()=>s.draw(),life:s.prog}); }
+  sperms=sperms.filter(s=>(s.prog===undefined?true:s.prog<1));
+  sperms.forEach(s=>{ if(s.upd){s.upd();s.drw();}else{s.update();s.draw();} });
+
+  // Label fertilization
+  ctx.fillStyle='#f48fb1'; ctx.font='bold 14px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText(fer?'⚡ FERTILIZATION!':'🏊 Sperm Swimming to Egg',180,360);
+  ctx.fillStyle=fer?'#69f0ae':'#ce93d8'; ctx.font='12px Segoe UI';
+  ctx.fillText(fer?'Sperm + Egg = Zygote 🎉':'Many sperm, One egg wins!',180,380);
+
+  // Development
+  drawDevelopment();
+
+  // Offspring examples
+  drawOffspring(450,440,'Oviparous','🥚','#80cbc4','Fish / Bird');
+  drawOffspring(570,440,'Oviparous','🐸','#a5d6a7','Frog / Reptile');
+  drawOffspring(690,440,'Viviparous','👶','#ffcc80','Human Baby');
+  drawOffspring(720,340,'Viviparous','🐄','#ffe082','Mammals');
+  ctx.fillStyle='rgba(200,180,255,0.7)'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('TYPES OF ANIMALS BY BIRTH',600,280);
+
+  drawCards();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

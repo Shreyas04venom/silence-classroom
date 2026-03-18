@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nervous System - Animation (Std 8)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#0a0d1f 0%,#02030a 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(100,180,255,0.3),0 0 200px rgba(50,100,220,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Nerve impulse particles
+let impulses=[];
+class Impulse {
+  constructor(sx,sy,tx,ty,color){
+    this.sx=sx; this.sy=sy; this.tx=tx; this.ty=ty;
+    this.prog=0; this.speed=0.012+Math.random()*0.01;
+    this.color=color||'#40c4ff';
+    this.trail=[];
+  }
+  update(){
+    this.prog+=this.speed;
+    let x=this.sx*(1-this.prog)+this.tx*this.prog;
+    let y=this.sy*(1-this.prog)+this.ty*this.prog;
+    this.trail.push({x,y,a:1});
+    this.trail=this.trail.filter(p=>(p.a-=0.04)>0);
+  }
+  draw(){
+    this.trail.forEach(p=>{
+      ctx.save(); ctx.globalAlpha=p.a*0.6;
+      ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    if(this.prog<1){
+      let x=this.sx*(1-this.prog)+this.tx*this.prog;
+      let y=this.sy*(1-this.prog)+this.ty*this.prog;
+      ctx.save(); ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=15;
+      ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// Neuron
+function drawNeuron(nx,ny,angle,color,label,sublabel,pulse){
+  ctx.save(); ctx.translate(nx,ny);
+  // Dendrites (input branches)
+  ctx.strokeStyle=color+'88'; ctx.lineWidth=2; ctx.lineCap='round';
+  for(let i=0;i<4;i++){
+    let ang=angle+Math.PI+(-1.2+i*0.8);
+    let len=45+Math.sin(t+i)*8;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*len,Math.sin(ang)*len);
+    ctx.stroke();
+    // Sub-branches
+    ctx.beginPath(); ctx.moveTo(Math.cos(ang)*len*0.6,Math.sin(ang)*len*0.6);
+    ctx.lineTo(Math.cos(ang+0.5)*len*0.9,Math.sin(ang+0.5)*len*0.9); ctx.stroke();
+  }
+  // Axon
+  ctx.strokeStyle=color; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(angle)*120,Math.sin(angle)*120); ctx.stroke();
+  // Myelin sheaths
+  ctx.strokeStyle=color+'55'; ctx.lineWidth=10;
+  for(let i=0;i<4;i++){
+    let dist=20+i*25;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle)*dist,Math.sin(angle)*dist);
+    ctx.lineTo(Math.cos(angle)*(dist+15),Math.sin(angle)*(dist+15));
+    ctx.stroke();
+  }
+  // Cell body (soma)
+  let ng=ctx.createRadialGradient(-5,-5,3,0,0,22);
+  ng.addColorStop(0,'rgba(255,255,255,0.6)'); ng.addColorStop(0.5,color+'cc'); ng.addColorStop(1,color+'44');
+  ctx.fillStyle=ng; ctx.shadowColor=color; ctx.shadowBlur=18+pulse*10;
+  ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.fill();
+  // Nucleus
+  ctx.fillStyle='rgba(255,255,255,0.8)';
+  ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+  // Axon terminal
+  let tx=Math.cos(angle)*120, ty=Math.sin(angle)*120;
+  ctx.fillStyle=color; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.arc(tx,ty,8,0,Math.PI*2); ctx.fill();
+  // Labels
+  if(label){
+    ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText(label,0,40);
+    if(sublabel){ ctx.fillStyle=color; ctx.font='10px Segoe UI'; ctx.fillText(sublabel,0,54); }
+  }
+  ctx.restore();
+}
+
+// Brain
+function drawBrain(bx,by,pulse){
+  ctx.save(); ctx.translate(bx,by);
+  let g=ctx.createRadialGradient(-15,-20,10,0,0,80);
+  g.addColorStop(0,'#ce93d8'); g.addColorStop(0.5,'#9c27b0'); g.addColorStop(1,'#4a148c');
+  ctx.fillStyle=g; ctx.shadowColor='#e040fb'; ctx.shadowBlur=30+pulse*15;
+  // Brain shape
+  ctx.beginPath();
+  ctx.moveTo(0,-80);
+  ctx.bezierCurveTo(80,-85,95,-20,80,30);
+  ctx.bezierCurveTo(90,70,60,100,0,95);
+  ctx.bezierCurveTo(-60,100,-90,70,-80,30);
+  ctx.bezierCurveTo(-95,-20,-80,-85,0,-80);
+  ctx.fill();
+  // Brain fold lines
+  ctx.strokeStyle='rgba(255,200,255,0.3)'; ctx.lineWidth=2; ctx.setLineDash([]);
+  for(let i=0;i<5;i++){
+    ctx.beginPath(); ctx.moveTo(-40+i*15,-60+i*8); ctx.quadraticCurveTo(-20+i*15,-40+i*8,20+i*15,-30+i*8); ctx.stroke();
+  }
+  // Hemisphere division
+  ctx.strokeStyle='rgba(255,180,255,0.4)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,-80); ctx.lineTo(0,95); ctx.stroke();
+  // Labels
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('🧠 BRAIN',0,-95);
+  ctx.fillStyle='#e1bee7'; ctx.font='11px Segoe UI';
+  ctx.fillText('Control Center',0,115);
+  // Sub-region labels
+  ctx.fillStyle='rgba(255,230,255,0.8)'; ctx.font='10px Segoe UI';
+  ctx.fillText('Cerebrum',35,-15); ctx.fillText('Thinking',35,-3);
+  ctx.fillText('Cerebellum',0,70); ctx.fillText('Balance',0,82);
+  ctx.fillStyle='rgba(255,200,255,0.6)'; ctx.font='9px Segoe UI';
+  ctx.fillText('Brain Stem',-75,20); ctx.fillText('Vital functions',-75,31);
+  ctx.restore();
+}
+
+// Spinal cord
+function drawSpinalCord(sx,sy,pulse){
+  ctx.save();
+  // Vertebrae
+  for(let i=0;i<10;i++){
+    let vy=sy+i*32;
+    let ww=22-i*0.5;
+    let g=ctx.createLinearGradient(sx-ww,vy,sx+ww,vy);
+    g.addColorStop(0,'rgba(0,0,0,0.4)'); g.addColorStop(0.3,'#7986cb'); g.addColorStop(0.7,'#5c6bc0'); g.addColorStop(1,'rgba(0,0,0,0.4)');
+    ctx.fillStyle=g; ctx.shadowColor='#9fa8da'; ctx.shadowBlur=10+Math.sin(t*2+i)*4;
+    ctx.beginPath(); ctx.roundRect(sx-ww/2,vy,ww,26,4); ctx.fill();
+    // Spinal cord inside
+    ctx.fillStyle=`rgba(100,200,255,${0.6+Math.sin(t*3+i)*0.2})`;
+    ctx.beginPath(); ctx.rect(sx-5,vy+3,10,20); ctx.fill();
+  }
+  // Nerve roots
+  for(let i=0;i<5;i++){
+    let vy=sy+30+i*60;
+    ctx.strokeStyle=`rgba(130,180,255,0.5)`; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(sx-11,vy); ctx.bezierCurveTo(sx-50,vy+5,sx-80,vy+20,sx-120,vy+10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx+11,vy); ctx.bezierCurveTo(sx+50,vy+5,sx+80,vy+20,sx+120,vy+10); ctx.stroke();
+  }
+  ctx.fillStyle='#9fa8da'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('SPINAL CORD',sx,sy+335);
+  ctx.fillStyle='#c5cae9'; ctx.font='9px Segoe UI';
+  ctx.fillText('Relay Pathway',sx,sy+349);
+  ctx.restore();
+}
+
+// Reflex arc illustration 
+function drawReflexArc(rx,ry,pulse){
+  ctx.save(); ctx.translate(rx,ry);
+  ctx.fillStyle='rgba(100,200,255,0.08)'; ctx.shadowColor='transparent';
+  ctx.beginPath(); ctx.roundRect(-120,-90,240,160,14); ctx.fill();
+  ctx.strokeStyle='rgba(100,200,255,0.3)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(-120,-90,240,160,14); ctx.stroke();
+  // Reflex path
+  const pts=[[-90,40],[-60,0],[-20,-20],[20,-20],[60,0],[90,40]];
+  ctx.strokeStyle='#ff8a65'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.forEach(([px,py])=>ctx.lineTo(px,py)); ctx.stroke();
+  // Arrows on path
+  pts.forEach(([px,py],i)=>{
+    if(i===0) return;
+    let da=`rgba(255,140,100,${0.7+Math.sin(t*3+i)*0.3})`;
+    ctx.fillStyle=da; ctx.shadowColor='#ff8a65'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2); ctx.fill();
+  });
+  // Labels
+  ctx.shadowBlur=0; ctx.textAlign='center';
+  ctx.fillStyle='#ff8a65'; ctx.font='bold 11px Segoe UI'; ctx.fillText('⚡ REFLEX ARC',0,-70);
+  ctx.fillStyle='rgba(255,200,180,0.8)'; ctx.font='9px Segoe UI';
+  ctx.fillText('Receptor → Sensory → Spinal → Motor → Effector',0,-56);
+  const rl=['👣\nReceptor','Sensory\nNerve','Spinal\nCord','Motor\nNerve','Muscle\nEffector'];
+  pts.forEach(([px,py],i)=>{
+    if(i===0||i===pts.length-1) return;
+    ctx.fillStyle='rgba(255,200,180,0.6)'; ctx.font='8px Segoe UI'; ctx.textAlign='center';
+    rl[i].split('\n').forEach((l,li)=>ctx.fillText(l,px,py+20+li*10));
+  });
+  ctx.fillStyle='rgba(255,180,150,0.8)'; ctx.font='9px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('STIMULUS',pts[0][0],pts[0][1]+20);
+  ctx.fillText('RESPONSE',pts[pts.length-1][0],pts[pts.length-1][1]+20);
+  ctx.restore();
+}
+
+const CARDS=[
+  {label:'① Central NS (CNS)',sub:'Brain + Spinal Cord\nControls everything 🧠',color:'#ce93d8',x:770,y:140},
+  {label:'② Peripheral NS (PNS)',sub:'Nerves throughout body\nSensory + Motor signals',color:'#81d4fa',x:770,y:260},
+  {label:'③ Sensory Neurons',sub:'Carry signals TO brain\n(Touch, Pain, Sight 👁️)',color:'#80cbc4',x:770,y:380},
+  {label:'④ Motor Neurons',sub:'Carry signals FROM brain\n(Move muscles 💪)',color:'#a5d6a7',x:770,y:500},
+];
+
+function drawCards(){
+  let cyc=(t%20)/20;
+  CARDS.forEach((c,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/CARDS.length))*6));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=160,bh=76,bx=c.x-bw/2,by=c.y-bh/2;
+    ctx.fillStyle='rgba(2,3,10,0.96)'; ctx.shadowColor=c.color; ctx.shadowBlur=15;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=c.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(c.label,c.x,c.y-14);
+    ctx.fillStyle=c.color; ctx.font='10px Segoe UI';
+    c.sub.split('\n').forEach((l,li)=>ctx.fillText(l,c.x,c.y+4+li*14));
+    ctx.restore();
+  });
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#0a0d1f'); g.addColorStop(1,'#02030a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,100,200,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#ce93d8'); g.addColorStop(0.5,'#81d4fa'); g.addColorStop(1,'#a5d6a7');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#7c4dff'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('⚡ NERVOUS SYSTEM 🧠',W/2,40);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(180,200,255,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How the Body Senses and Responds',W/2,62);
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2.5));
+  ctx.clearRect(0,0,W,H);
+  drawBg(); drawTitle();
+
+  // Brain
+  drawBrain(200,200,pulse);
+
+  // Spinal cord
+  drawSpinalCord(200,290,pulse);
+
+  // Neurons
+  drawNeuron(450,170,0,'#40c4ff','MOTOR NEURON','Sends commands 🏃',pulse);
+  drawNeuron(450,340,-Math.PI,'#69f0ae','SENSORY NEURON','Receives signals 👁️',pulse);
+
+  // Impulse signals
+  if(Math.random()<0.05) impulses.push(new Impulse(280,200,430,170,'#40c4ff'));
+  if(Math.random()<0.05) impulses.push(new Impulse(430,340,280,300,'#69f0ae'));
+  impulses=impulses.filter(im=>im.prog<1);
+  impulses.forEach(im=>{ im.update(); im.draw(); });
+
+  // Reflex arc
+  drawReflexArc(540,560,pulse);
+
+  drawCards();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

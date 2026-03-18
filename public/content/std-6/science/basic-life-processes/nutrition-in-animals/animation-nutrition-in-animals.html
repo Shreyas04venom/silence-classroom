@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nutrition in Animals - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:radial-gradient(ellipse,#1a0a00,#080300); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { border-radius:20px; box-shadow:0 0 80px rgba(255,160,0,0.3); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d');
+cv.width=900; cv.height=680;
+const W=900,H=680;
+let t=0;
+
+const STEPS=[
+  {name:'① INGESTION',sub:'Eating / Swallowing',emoji:'🍎',icon:'👄',color:'#ff4081',x:160,y:130},
+  {name:'② DIGESTION',sub:'Breaking Down Food',emoji:'🔥',icon:'🫃',color:'#ff9800',x:740,y:200},
+  {name:'③ ABSORPTION',sub:'Nutrients Enter Blood',emoji:'🩸',icon:'🫀',color:'#f44336',x:740,y:330},
+  {name:'④ ASSIMILATION',sub:'Body Uses Nutrients',emoji:'💪',icon:'💪',color:'#4caf50',x:740,y:460},
+  {name:'⑤ EGESTION',sub:'Waste Removed',emoji:'💩',icon:'🚽',color:'#795548',x:160,y:550},
+];
+
+class FoodParticle {
+  constructor(){ this.reset(); }
+  reset(){ this.progress=0; this.speed=0.003+Math.random()*0.002; this.r=8+Math.random()*6; this.emoji=['🍎','🍗','🍕','🌽','🥦'][Math.floor(Math.random()*5)]; this.life=1; this.hue=Math.random()*40+20; }
+  getPath(colors){
+    return [
+      {x:300,y:115},{x:360,y:130},{x:400,y:175},{x:420,y:230},
+      {x:430,y:290},{x:415,y:350},{x:400,y:400},{x:390,y:450},
+      {x:400,y:500},{x:430,y:545},{x:460,y:565},{x:480,y:570}
+    ];
+  }
+  update(){ this.progress+=this.speed; if(this.progress>1){ this.life-=0.05; } }
+  getPos(){ let path=this.getPath(); let idx=Math.floor(this.progress*(path.length-1)); let frac=this.progress*(path.length-1)-idx; if(idx>=path.length-1) return path[path.length-1]; return {x:path[idx].x+(path[idx+1].x-path[idx].x)*frac, y:path[idx].y+(path[idx+1].y-path[idx].y)*frac}; }
+  draw(){ if(this.life<=0) return; let pos=this.getPos(); let scale=1-this.progress*0.6; let alpha=Math.min(1,this.life)*Math.min(1,this.progress*10);
+    ctx.save(); ctx.globalAlpha=alpha; ctx.font=`${24*scale}px serif`; ctx.textAlign='center'; ctx.shadowColor=`hsl(${this.hue*8},100%,60%)`; ctx.shadowBlur=12;
+    ctx.fillText(this.emoji,pos.x,pos.y);
+    // Glow ring
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,13*scale,0,Math.PI*2);
+    let g=ctx.createRadialGradient(pos.x,pos.y,0,pos.x,pos.y,13*scale);
+    g.addColorStop(0,'rgba(255,200,100,0.3)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.shadowBlur=0; ctx.fill();
+    ctx.restore(); }
+}
+
+class NutrientParticle {
+  constructor(x,y){ this.x=x; this.y=y; this.vx=(Math.random()-0.5)*3; this.vy=(Math.random()-0.5)*3; this.r=3+Math.random()*3; this.color=['#ff5252','#69f0ae','#ffeb3b','#40c4ff'][Math.floor(Math.random()*4)]; this.life=1; this.decay=0.02; }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vx*=0.95; this.vy*=0.95; this.life-=this.decay; }
+  draw(){ ctx.save(); ctx.globalAlpha=this.life; ctx.shadowColor=this.color; ctx.shadowBlur=8; ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+let foods=[], nutrients=[];
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H*0.5,0,W/2,H/2,520);
+  g.addColorStop(0,'#261200'); g.addColorStop(0.5,'#140800'); g.addColorStop(1,'#080300');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+// 3D body/digestive tube
+function drawDigestiveTube(){
+  // Outer glow tube
+  ctx.save();
+  ctx.strokeStyle='rgba(220,160,80,0.25)'; ctx.lineWidth=45; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor='#ff9800'; ctx.shadowBlur=25;
+  ctx.beginPath(); ctx.moveTo(300,115); ctx.bezierCurveTo(340,130,420,230,425,300);
+  ctx.bezierCurveTo(430,370,395,440,400,510); ctx.lineTo(480,570); ctx.stroke();
+  // Main tube
+  ctx.strokeStyle='rgba(190,120,50,0.8)'; ctx.lineWidth=28;
+  ctx.beginPath(); ctx.moveTo(300,115); ctx.bezierCurveTo(340,130,420,230,425,300);
+  ctx.bezierCurveTo(430,370,395,440,400,510); ctx.lineTo(480,570); ctx.stroke();
+  // Inner highlight
+  ctx.strokeStyle='rgba(255,220,160,0.3)'; ctx.lineWidth=10;
+  ctx.beginPath(); ctx.moveTo(298,115); ctx.bezierCurveTo(338,130,418,230,423,300);
+  ctx.bezierCurveTo(428,370,393,440,398,510); ctx.lineTo(478,570); ctx.stroke();
+  ctx.restore();
+  // Stomach bulge
+  ctx.save();
+  let g=ctx.createRadialGradient(415,295,5,415,295,70);
+  g.addColorStop(0,'#ffcc80'); g.addColorStop(0.5,'#ef6c00'); g.addColorStop(1,'#bf360c');
+  ctx.fillStyle=g; ctx.shadowColor='#ff9800'; ctx.shadowBlur=30;
+  ctx.beginPath(); ctx.ellipse(415,300,75,65,0,0,Math.PI*2); ctx.fill();
+  // Stomach interior pattern
+  ctx.strokeStyle='rgba(255,200,150,0.3)'; ctx.lineWidth=2;
+  for(let i=0;i<4;i++){ ctx.beginPath(); ctx.arc(415,300-i*12,40-i*5,0,Math.PI,false); ctx.stroke(); }
+  ctx.restore();
+}
+
+function drawIcons(){
+  const icons=[
+    {x:260,y:115,emoji:'🍎',label:'FOOD',s:40},
+    {x:280,y:300,emoji:'🔥',label:'ACID',s:30},
+    {x:250,y:450,emoji:'📦',label:'ABSORB',s:30},
+    {x:480,y:570,emoji:'💩',label:'WASTE',s:36},
+  ];
+  icons.forEach(ic=>{
+    ctx.save();
+    ctx.font=`${ic.s}px serif`; ctx.textAlign='center';
+    ctx.shadowColor='rgba(255,180,80,0.5)'; ctx.shadowBlur=12;
+    ctx.fillText(ic.emoji,ic.x,ic.y);
+    ctx.font='10px Segoe UI'; ctx.fillStyle='rgba(255,200,120,0.7)'; ctx.shadowBlur=0;
+    ctx.fillText(ic.label,ic.x,ic.y+14);
+    ctx.restore();
+  });
+}
+
+function drawLabels(cycleT){
+  STEPS.forEach((s,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cycleT-(i*0.17))*6));
+    if(alpha<=0) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=185,bh=58,bx=s.x-bw/2,by=s.y-bh/2;
+    ctx.shadowColor=s.color; ctx.shadowBlur=18;
+    ctx.fillStyle='rgba(15,6,0,0.96)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,12); ctx.fill();
+    ctx.strokeStyle=s.color; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.font='20px serif'; ctx.textAlign='center'; ctx.shadowBlur=0; ctx.fillStyle=s.color;
+    ctx.fillText(s.icon,bx+28,s.y+7);
+    ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.fillText(s.name,s.x+10,s.y-3);
+    ctx.font='10px Segoe UI'; ctx.fillStyle=s.color; ctx.fillText(s.sub,s.x+10,s.y+14);
+    ctx.restore();
+  });
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#ff9800'); g.addColorStop(0.5,'#ff5722'); g.addColorStop(1,'#ff9800');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#ff6d00'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🍎 NUTRITION IN ANIMALS 🦁',W/2,44);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(255,200,150,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — 5 Steps of Nutrition',W/2,66);
+  ctx.restore();
+}
+
+function drawInfoBox(cycleT){
+  ctx.save(); ctx.globalAlpha=0.88;
+  let bx=22,by=100,bw=170,bh=220;
+  ctx.fillStyle='rgba(18,8,0,0.95)'; ctx.shadowColor='#ff9800'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,12); ctx.fill();
+  ctx.strokeStyle='rgba(255,150,0,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#ff9800'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='left'; ctx.shadowBlur=0;
+  ctx.fillText('NUTRITION STEPS:',bx+10,by+22);
+  STEPS.forEach((s,i)=>{
+    let done=cycleT>(i*0.17+0.14);
+    ctx.fillStyle=done?s.color:'rgba(255,255,255,0.3)';
+    ctx.font=`${done?'bold ':' '}10px Segoe UI`;
+    ctx.fillText((done?'✓ ':'○ ')+s.name.replace(/[①-⑤]/,'').trim(),bx+10,by+42+i*34);
+  });
+  ctx.restore();
+}
+
+function loop(){
+  t+=0.016;
+  let cycleT=(t%22)/22;
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+  drawDigestiveTube();
+  drawIcons();
+  // Spawn food particles
+  if(foods.filter(f=>f.life>0).length<8 && Math.random()<0.04){ foods.push(new FoodParticle()); }
+  foods=foods.filter(f=>f.life>0);
+  foods.forEach(f=>{ f.update(); f.draw(); if(f.progress>0.35&&f.progress<0.65&&Math.random()<0.06){ nutrients.push(new NutrientParticle(f.getPos().x,f.getPos().y)); } });
+  nutrients=nutrients.filter(n=>n.life>0); nutrients.forEach(n=>{ n.update(); n.draw(); });
+  drawLabels(cycleT);
+  drawInfoBox(cycleT);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

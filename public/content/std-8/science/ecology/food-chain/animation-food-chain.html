@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Chain - Ecosystem</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #558B2F, #7CB342);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #container {
+            position: relative;
+            width: 950px;
+            height: 700px;
+            background: linear-gradient(to bottom, #F1F8E9, #DCEDC8);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 38px;
+            font-weight: bold;
+            color: #33691E;
+            text-align: center;
+            z-index: 200;
+        }
+
+        .level {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 850px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .organism {
+            width: 160px;
+            height: 160px;
+            background: white;
+            border-radius: 20px;
+            border: 5px solid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .organism-label {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 2px solid;
+        }
+
+        .arrow {
+            position: absolute;
+            width: 80px;
+            height: 8px;
+            background: #F57C00;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 4px;
+        }
+
+        .arrow:after {
+            content: '';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid #F57C00;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+        }
+
+        .level1 {
+            top: 500px;
+        }
+
+        .level2 {
+            top: 350px;
+        }
+
+        .level3 {
+            top: 200px;
+        }
+
+        .sun {
+            position: absolute;
+            top: 40px;
+            right: 60px;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #FFC107, #FF9800);
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(255, 193, 7, 0.6);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 40px rgba(255, 193, 7, 0.6);
+            }
+
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 60px rgba(255, 193, 7, 0.9);
+            }
+        }
+
+        .info {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            border: 3px solid #558B2F;
+            max-width: 350px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .info h3 {
+            color: #33691E;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .info p {
+            color: #424242;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .energy {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #FFC107;
+            border-radius: 50%;
+            animation: energyFlow 3s linear infinite;
+            opacity: 0.8;
+        }
+
+        @keyframes energyFlow {
+            0% {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                bottom: 350px;
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="title">🌿 FOOD CHAIN - Energy Flow 🍃</div>
+        <div class="sun"></div>
+        <div class="level level3">
+            <div class="organism" style="border-color:#D32F2F;">🦅<div class="organism-label"
+                    style="border-color:#D32F2F;color:#D32F2F;">Tertiary Consumer<br>(Eagle)</div>
+            </div>
+        </div>
+        <div class="arrow" style="top:290px;"></div>
+        <div class="level level2">
+            <div class="organism" style="border-color:#FF6F00;">🐍<div class="organism-label"
+                    style="border-color:#FF6F00;color:#FF6F00;">Secondary Consumer<br>(Snake)</div>
+            </div>
+        </div>
+        <div class="arrow" style="top:440px;"></div>
+        <div class="level level1">
+            <div class="organism" style="border-color:#1976D2;">🐭<div class="organism-label"
+                    style="border-color:#1976D2;color:#1976D2;">Primary Consumer<br>(Mouse)</div>
+            </div>
+        </div>
+        <div class="arrow" style="top:590px;"></div>
+        <div style="position:absolute;bottom:30px;left:50%;transform:translateX(-50%);">
+            <div class="organism" style="border-color:#388E3C;width:180px;height:90px;font-size:50px;">🌾<div
+                    class="organism-label" style="border-color:#388E3C;color:#388E3C;">Producer<br>(Grass/Plants)</div>
+            </div>
+        </div>
+        <div class="info">
+            <h3>🔗 Food Chain Flow</h3>
+            <p><strong>Sun</strong> → <strong>Plants</strong> → <strong>Herbivore</strong> → <strong>Carnivore</strong>
+                → <strong>Top Predator</strong><br><br>Energy flows UP the chain. Each level gets 10% energy from below!
+            </p>
+        </div>
+    </div>
+    <script>
+        function createEnergyParticles() {
+            const container = document.getElementById('container');
+            setInterval(() => {
+                const energy = document.createElement('div');
+                energy.className = 'energy';
+                energy.style.left = (Math.random() * 800 + 75) + 'px';
+                energy.style.animationDuration = (2 + Math.random() * 2) + 's';
+                container.appendChild(energy);
+                setTimeout(() => energy.remove(), 3500);
+            }, 800);
+        }
+        createEnergyParticles();
+    </script>
+</body>
+
+</html>

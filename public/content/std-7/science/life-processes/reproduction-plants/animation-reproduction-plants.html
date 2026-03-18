@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reproduction in Plants - Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#0d1f0a 0%,#020a01 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(100,255,80,0.3),0 0 200px rgba(50,180,80,0.15); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=900,H=680;
+let t=0;
+
+// Pollen particles flying
+let pollens=[];
+class Pollen {
+  constructor(sx,sy){
+    this.x=sx; this.y=sy;
+    this.tx=420+Math.random()*60; this.ty=280+Math.random()*40;
+    this.prog=0; this.speed=0.005+Math.random()*0.005;
+    this.wobble=Math.random()*Math.PI*2;
+    this.color=`hsl(${45+Math.random()*30},100%,65%)`;
+  }
+  update(){ this.prog+=this.speed; this.wobble+=0.1; }
+  draw(){
+    if(this.prog>1) return;
+    let x=this.x*(1-this.prog)+this.tx*this.prog+Math.sin(this.wobble)*15*(1-this.prog);
+    let y=this.y*(1-this.prog)+this.ty*this.prog-Math.sin(this.prog*Math.PI)*60;
+    ctx.save();
+    ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='8px serif'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText('🌼',x,y+3);
+    ctx.restore();
+  }
+}
+
+// Seed dispersal particles
+let seeds=[];
+class Seed {
+  constructor(type,sx,sy){
+    this.type=type; this.x=sx; this.y=sy;
+    this.vx=(Math.random()-0.5)*3+1.5; this.vy=-2-Math.random()*2;
+    this.life=1; this.rot=Math.random()*Math.PI;
+  }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.06; this.rot+=0.05; this.life-=0.005; }
+  draw(){
+    ctx.save(); ctx.globalAlpha=this.life;
+    ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+    if(this.type==='wind'){
+      ctx.strokeStyle='#b0bec5'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-20); ctx.stroke();
+      ctx.fillStyle='#b2dfdb'; ctx.beginPath(); ctx.ellipse(0,-22,4,12,0,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle='#8d6e63';
+      ctx.beginPath(); ctx.ellipse(0,0,5,8,0,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Growing seedling
+function drawSeedling(gx,gy,growth,color){
+  ctx.save();
+  // Root
+  ctx.strokeStyle='#795548'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(gx,gy); ctx.quadraticCurveTo(gx-20,gy+30,gx-10,gy+55*growth); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(gx,gy); ctx.quadraticCurveTo(gx+20,gy+30,gx+10,gy+55*growth); ctx.stroke();
+  // Stem
+  ctx.strokeStyle=color; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(gx,gy); ctx.quadraticCurveTo(gx+5,gy-80*growth,gx-5,gy-150*growth); ctx.stroke();
+  if(growth>0.4){
+    // Leaves
+    ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=12;
+    ctx.save(); ctx.translate(gx-5,gy-90*growth);
+    ctx.beginPath(); ctx.ellipse(-25,-10,35,12,Math.PI/6,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.translate(gx-5,gy-90*growth);
+    ctx.beginPath(); ctx.ellipse(25,-10,35,12,-Math.PI/6,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  if(growth>0.7){
+    // Flower bud / fruit
+    ctx.shadowColor='#ff8a65'; ctx.shadowBlur=15;
+    ctx.fillStyle='#ff7043';
+    ctx.beginPath(); ctx.arc(gx-5,gy-155*growth,12*growth,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ffd54f';
+    ctx.beginPath(); ctx.arc(gx-5,gy-155*growth,7*growth,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Flower with stamens & pistil
+function drawFlower(fx,fy,pulse){
+  ctx.save(); ctx.translate(fx,fy);
+  // Petals
+  for(let i=0;i<6;i++){
+    ctx.save(); ctx.rotate(i*Math.PI/3+t*0.2);
+    let g=ctx.createRadialGradient(0,-40,2,0,-40,28);
+    g.addColorStop(0,'#fff9c4'); g.addColorStop(1,'#f06292');
+    ctx.fillStyle=g; ctx.shadowColor='#f48fb1'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.ellipse(0,-40,18,28,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  // Receptacle/center
+  let cg=ctx.createRadialGradient(-3,-3,2,0,0,20);
+  cg.addColorStop(0,'#fff9c4'); cg.addColorStop(1,'#f9a825');
+  ctx.fillStyle=cg; ctx.shadowColor='#ffd54f'; ctx.shadowBlur=15+pulse*8;
+  ctx.beginPath(); ctx.arc(0,0,20,0,Math.PI*2); ctx.fill();
+  // Stamens (pollen carriers)
+  for(let i=0;i<5;i++){
+    let ang=i*Math.PI*2/5;
+    let sx2=Math.cos(ang)*15, sy2=Math.sin(ang)*15;
+    ctx.strokeStyle='#ff8f00'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(sx2*0.4,sy2*0.4); ctx.lineTo(sx2,sy2); ctx.stroke();
+    ctx.fillStyle='#ffca28'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(sx2,sy2,4,0,Math.PI*2); ctx.fill();
+  }
+  // Pistil label
+  ctx.fillStyle='#fff'; ctx.font='bold 10px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('PISTIL',0,40);
+  ctx.fillStyle='#ffca28'; ctx.font='10px Segoe UI';
+  ctx.fillText('STAMEN ↑',35,-5);
+  ctx.restore();
+}
+
+// Vegetative reproduction: potato/bulb
+function drawVegetative(vx,vy,pulse){
+  ctx.save(); ctx.translate(vx,vy);
+  // Main tuber
+  let g=ctx.createRadialGradient(-10,-10,5,0,0,45);
+  g.addColorStop(0,'#d4a060'); g.addColorStop(1,'#795548');
+  ctx.fillStyle=g; ctx.shadowColor='#a1887f'; ctx.shadowBlur=15+pulse*5;
+  ctx.beginPath(); ctx.ellipse(0,0,50,35,0,0,Math.PI*2); ctx.fill();
+  // Eyes/buds
+  const eyes=[[-20,-10],[10,-15],[25,5],[-10,12]];
+  eyes.forEach(([ex,ey],i)=>{
+    ctx.fillStyle='#5d4037';
+    ctx.beginPath(); ctx.arc(ex,ey,5,0,Math.PI*2); ctx.fill();
+    if(Math.sin(t+i)>0){
+      ctx.strokeStyle='#66bb6a'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(ex,ey); ctx.quadraticCurveTo(ex+Math.sin(t+i)*15,ey-20,ex+Math.sin(t+i)*12,ey-35); ctx.stroke();
+    }
+  });
+  ctx.fillStyle='#fff'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.fillText('POTATO 🥔',0,60);
+  ctx.fillStyle='#a5d6a7'; ctx.font='11px Segoe UI';
+  ctx.fillText('Vegetative Reproduction',0,78);
+  ctx.restore();
+}
+
+const CARDS=[
+  {label:'① Sexual Reproduction',sub:'Pollination → Fertilization\n→ Seed Formation 🌸',color:'#f48fb1',x:760,y:160},
+  {label:'② Pollination',sub:'Pollen moves from\nStamen → Pistil 🐝',color:'#ffd54f',x:760,y:280},
+  {label:'③ Seed Dispersal',sub:'Wind 🌬️ Water 💧\nAnimals 🦜 Explosion 💥',color:'#80deea',x:760,y:400},
+  {label:'④ Vegetative Repro.',sub:'New plant from\nstem/root/leaf 🥔',color:'#a5d6a7',x:760,y:520},
+];
+
+function drawCards(){
+  let cyc=(t%20)/20;
+  CARDS.forEach((c,i)=>{
+    let alpha=Math.max(0,Math.min(1,(cyc-(i/CARDS.length))*6));
+    ctx.save(); ctx.globalAlpha=alpha;
+    let bw=165,bh=72,bx=c.x-bw/2,by=c.y-bh/2;
+    ctx.fillStyle='rgba(2,15,5,0.95)'; ctx.shadowColor=c.color; ctx.shadowBlur=15;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+    ctx.strokeStyle=c.color; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center'; ctx.shadowBlur=0;
+    ctx.fillText(c.label,c.x,c.y-10);
+    ctx.fillStyle=c.color; ctx.font='10px Segoe UI';
+    c.sub.split('\n').forEach((l,li)=>ctx.fillText(l,c.x,c.y+6+li*14));
+    ctx.restore();
+  });
+}
+
+function drawBg(){
+  let g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,650);
+  g.addColorStop(0,'#0d1f0a'); g.addColorStop(1,'#020a01');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,180,80,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+}
+
+function drawTitle(){
+  ctx.save();
+  let g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#f48fb1'); g.addColorStop(0.5,'#a5d6a7'); g.addColorStop(1,'#80deea');
+  ctx.font='bold 32px Segoe UI'; ctx.textAlign='center'; ctx.shadowColor='#66bb6a'; ctx.shadowBlur=25;
+  ctx.fillStyle=g; ctx.fillText('🌸 REPRODUCTION IN PLANTS 🌱',W/2,40);
+  ctx.font='14px Segoe UI'; ctx.fillStyle='rgba(170,255,170,0.7)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — How Plants Produce New Plants',W/2,62);
+  ctx.restore();
+}
+
+// Cycle position for seedling growth
+function getSeedlingGrowth(){ return (Math.sin(t*0.4)*0.5+0.5); }
+
+function loop(){
+  t+=0.016;
+  let pulse=Math.abs(Math.sin(t*2.5));
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawTitle();
+
+  // Flower section (left)
+  drawFlower(200,250,pulse);
+  ctx.fillStyle='#f48fb1'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('FLOWER PARTS',200,360);
+
+  // Pollen flying
+  if(Math.random()<0.06) pollens.push(new Pollen(200+Math.random()*40-20,240));
+  pollens=pollens.filter(p=>p.prog<=1);
+  pollens.forEach(p=>{ p.update(); p.draw(); });
+
+  // Seedling growing in center
+  let gr=getSeedlingGrowth();
+  drawSeedling(430,580,gr,'#66bb6a');
+  ctx.fillStyle='#a5d6a7'; ctx.font='bold 13px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('NEW PLANT GROWS 🌱',430,600);
+
+  // Seed dispersal
+  if(Math.random()<0.04) seeds.push(new Seed('wind',430,560-150*gr));
+  if(Math.random()<0.03) seeds.push(new Seed('heavy',430,560-150*gr));
+  seeds=seeds.filter(s=>s.life>0);
+  seeds.forEach(s=>{ s.update(); s.draw(); });
+
+  // Vegetative repro potato
+  drawVegetative(600,450,pulse);
+
+  drawCards();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

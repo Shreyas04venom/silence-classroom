@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digestive System Journey - 3D Animation</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:radial-gradient(ellipse at center,#1a0533 0%,#0d0221 100%); display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+canvas { display:block; border-radius:20px; box-shadow:0 0 80px rgba(255,120,50,0.4),0 0 200px rgba(180,80,20,0.2); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+canvas.width=900; canvas.height=680;
+const W=canvas.width, H=canvas.height;
+let t=0, frame=0;
+
+// Color palette matching whiteboard image style
+const COLORS={
+  bg1:'#1a0533', bg2:'#2d0a55',
+  mouth:'#ff6b9d', stomach:'#c17f59', smallInt:'#f4a26a', largeInt:'#e07b45',
+  esoph:'#d4a0b8', rectum:'#a0552d', skin:'#f5c5a0', skinDark:'#e8a878',
+  text:'#fffbe6', glow:'rgba(255,180,80,0.6)',
+  arrow1:'#00e5ff', arrow2:'#69f0ae', arrow3:'#ffeb3b', arrow4:'#ff6e40',
+  label:'rgba(255,255,255,0.95)', labelBorder:'rgba(255,165,60,0.9)'
+};
+
+// Steps for the journey
+const STEPS=[
+  {name:'① MOUTH',sub:'CHEWING & TASTE',color:'#ff6b9d',x:440,y:115},
+  {name:'② ESOPHAGUS',sub:'FOOD PIPE',color:'#ce93d8',x:620,y:200},
+  {name:'③ STOMACH',sub:'ACID BREAKS FOOD',color:'#ffb74d',x:600,y:330},
+  {name:'④ SMALL INTESTINE',sub:'NUTRIENTS ABSORBED',color:'#80deea',x:210,y:400},
+  {name:'⑤ LARGE INTESTINE',sub:'WATER ABSORPTION',color:'#a5d6a7',x:220,y:530},
+  {name:'⑥ RECTUM',sub:'WASTE STORAGE',color:'#bcaaa4',x:600,y:550},
+  {name:'⑦ WASTE OUT',sub:'💩 REMOVAL',color:'#795548',x:440,y:630},
+];
+
+// Food particle
+let foodParticles=[];
+let activeSteps=[];
+let cycleTime=0; const CYCLE=18; // seconds per cycle
+
+function easeInOut(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+function lerp(a,b,t){return a+(b-a)*t;}
+
+// 3D-ish helper: draw a pseudo-3D organ
+function drawOrgan3D(x,y,w,h,rx,ry,color,shadow,label,t_pulse){
+  ctx.save();
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(x+8,y+h/2+10,w/2,h/4,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.fill();
+  // Body gradient with 3D effect
+  let grad=ctx.createRadialGradient(x-w*0.2,y-h*0.2,2,x,y,Math.max(w,h)*0.8);
+  grad.addColorStop(0,'rgba(255,255,255,0.35)');
+  grad.addColorStop(0.4,color);
+  grad.addColorStop(1,shadow);
+  ctx.beginPath();
+  ctx.ellipse(x,y,w*(1+t_pulse*0.04),h*(1+t_pulse*0.02),0,0,Math.PI*2);
+  ctx.fillStyle=grad;
+  ctx.shadowColor=color; ctx.shadowBlur=20;
+  ctx.fill();
+  // Highlight rim
+  ctx.beginPath();
+  ctx.ellipse(x-w*0.15,y-h*0.25,w*0.35,h*0.18,Math.PI/6,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.22)';
+  ctx.shadowBlur=0;
+  ctx.fill();
+  ctx.restore();
+}
+
+// Draw a tube/pipe segment
+function drawTube(x1,y1,x2,y2,r,color1,color2){
+  ctx.save();
+  let dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+  let nx=-dy/len*r, ny=dx/len*r;
+  let grad=ctx.createLinearGradient(x1-nx,y1-ny,x1+nx,y1+ny);
+  grad.addColorStop(0,'rgba(0,0,0,0.3)');
+  grad.addColorStop(0.3,color1);
+  grad.addColorStop(0.7,color2);
+  grad.addColorStop(1,'rgba(0,0,0,0.3)');
+  ctx.beginPath();
+  ctx.moveTo(x1-nx,y1-ny); ctx.lineTo(x2-nx,y2-ny);
+  ctx.lineTo(x2+nx,y2+ny); ctx.lineTo(x1+nx,y1+ny);
+  ctx.closePath();
+  ctx.fillStyle=grad;
+  ctx.shadowColor=color1; ctx.shadowBlur=10;
+  ctx.fill();
+  ctx.restore();
+}
+
+// Glow label box
+function drawLabel(step,alpha){
+  if(alpha<=0) return;
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  let px=step.x, py=step.y, bw=200, bh=60;
+  // Shadow glow
+  ctx.shadowColor=step.color; ctx.shadowBlur=30;
+  // Box
+  let bg=ctx.createLinearGradient(px-bw/2,py-bh/2,px+bw/2,py+bh/2);
+  bg.addColorStop(0,'rgba(30,10,60,0.95)');
+  bg.addColorStop(1,'rgba(50,20,80,0.95)');
+  ctx.fillStyle=bg;
+  ctx.beginPath();
+  ctx.roundRect(px-bw/2,py-bh/2,bw,bh,12);
+  ctx.fill();
+  ctx.strokeStyle=step.color; ctx.lineWidth=2.5;
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  // Text
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Segoe UI';
+  ctx.textAlign='center';
+  ctx.fillText(step.name,px,py-2);
+  ctx.font='12px Segoe UI'; ctx.fillStyle=step.color;
+  ctx.fillText(step.sub,px,py+18);
+  ctx.restore();
+}
+
+// Juice/enzyme particle burst
+class Particle {
+  constructor(x,y,color){ this.x=x; this.y=y; this.vx=(Math.random()-0.5)*3; this.vy=(Math.random()-0.5)*3-1; this.r=Math.random()*5+2; this.color=color; this.life=1; this.decay=0.015+Math.random()*0.02; }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vy+=0.05; this.life-=this.decay; this.r*=0.97; }
+  draw(){ ctx.save(); ctx.globalAlpha=this.life*0.8; ctx.fillStyle=this.color; ctx.shadowColor=this.color; ctx.shadowBlur=8; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+let particles=[];
+
+// Food bolus traveling through system
+class FoodBolus {
+  constructor(){ this.reset(); }
+  reset(){ this.t=0; this.active=true; this.emoji='🍔'; }
+  // Path waypoints through digestive system
+  getPos(progress){
+    const path=[
+      {x:442,y:115},{x:442,y:150},{x:442,y:200},{x:450,y:270},
+      {x:460,y:330},{x:450,y:380},{x:420,y:420},{x:390,y:450},
+      {x:370,y:480},{x:380,y:510},{x:420,y:540},{x:450,y:560},
+      {x:450,y:600},{x:450,y:640}
+    ];
+    let idx=Math.floor(progress*(path.length-1));
+    let frac=progress*(path.length-1)-idx;
+    if(idx>=path.length-1) return path[path.length-1];
+    return {x:lerp(path[idx].x,path[idx+1].x,frac),y:lerp(path[idx].y,path[idx+1].y,frac)};
+  }
+  update(){
+    this.t+=0.003;
+    if(this.t>1){ this.active=false; }
+    // Spawn particles
+    if(this.t>0.3 && this.t<0.7 && Math.random()<0.15){
+      let pos=this.getPos(this.t);
+      particles.push(new Particle(pos.x,pos.y,'#ffcc02'));
+      particles.push(new Particle(pos.x,pos.y,'#69f0ae'));
+    }
+  }
+  draw(){
+    if(!this.active) return;
+    let pos=this.getPos(this.t);
+    let scale=1-this.t*0.55;
+    let alpha=this.t<0.05?this.t*20:this.t>0.9?(1-this.t)*10:1;
+    ctx.save();
+    ctx.globalAlpha=Math.min(1,alpha);
+    ctx.font=`${24*scale}px serif`;
+    ctx.textAlign='center';
+    ctx.shadowColor='#ff9800'; ctx.shadowBlur=15;
+    ctx.fillText(this.emoji,pos.x,pos.y);
+    // Glow
+    ctx.beginPath();
+    ctx.arc(pos.x,pos.y,10*scale,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,180,60,0.25)';
+    ctx.fill();
+    ctx.restore();
+  }
+}
+let boli=[new FoodBolus()];
+
+function spawnBolusIfNeeded(){
+  boli=boli.filter(b=>b.active);
+  if(boli.length===0){ let b=new FoodBolus(); boli.push(b); }
+}
+
+// Background stars/particles
+let bgParticles=[];
+for(let i=0;i<60;i++) bgParticles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+0.3,alpha:Math.random(),speed:Math.random()*0.3+0.1});
+
+function drawBackground(){
+  let grad=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.7);
+  grad.addColorStop(0,'#2d0a55');
+  grad.addColorStop(0.5,'#1a0533');
+  grad.addColorStop(1,'#0d0221');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  bgParticles.forEach(p=>{ p.alpha+=p.speed*0.02; if(p.alpha>1)p.alpha=0; ctx.globalAlpha=p.alpha*0.5; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); });
+  ctx.globalAlpha=1;
+}
+
+function drawBody(){
+  // Main body silhouette
+  ctx.save();
+  let bodyGrad=ctx.createLinearGradient(370,80,520,660);
+  bodyGrad.addColorStop(0,COLORS.skin);
+  bodyGrad.addColorStop(1,COLORS.skinDark);
+  ctx.beginPath();
+  ctx.ellipse(442,150,55,70,0,0,Math.PI*2); // Head
+  ctx.fillStyle=bodyGrad; ctx.shadowColor='rgba(255,200,150,0.3)'; ctx.shadowBlur=20;
+  ctx.fill();
+  // Torso
+  ctx.beginPath();
+  ctx.roundRect(375,215,135,380,20);
+  ctx.fill();
+  ctx.restore();
+  // Head eyes
+  ctx.save();
+  ctx.fillStyle='#2d0a55'; ctx.beginPath(); ctx.ellipse(425,142,7,8,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(460,142,7,8,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(427,140,3,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(462,140,3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawOrgans(pulse){
+  let heartbeat=Math.sin(t*6)*0.02;
+  // Esophagus tube
+  drawTube(442,200,450,270,12,'#d4a0b8','#b3789c');
+  // Stomach
+  drawOrgan3D(450,330,70,55,'#c17f59','#96552d',COLORS.stomach,'#6b3a18','STOMACH',heartbeat*2);
+  // Small intestine (coiled)
+  ctx.save();
+  let sigrad=ctx.createRadialGradient(410,430,5,410,430,60);
+  sigrad.addColorStop(0,'#f7c89b'); sigrad.addColorStop(1,'#e89a5a');
+  ctx.strokeStyle='#f4a26a'; ctx.lineWidth=18; ctx.lineCap='round';
+  ctx.shadowColor='#f4a26a'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.arc(410,435,50,Math.PI*0.1,Math.PI*1.6); ctx.stroke();
+  ctx.beginPath(); ctx.arc(410,435,30,Math.PI*1.7,Math.PI*0.05); ctx.stroke();
+  ctx.restore();
+  // Large intestine (U shape)
+  ctx.save();
+  ctx.strokeStyle='#e07b45'; ctx.lineWidth=24; ctx.lineCap='round';
+  ctx.shadowColor='#e07b45'; ctx.shadowBlur=15;
+  ctx.beginPath();
+  ctx.moveTo(380,500); ctx.lineTo(380,560); ctx.arcTo(380,590,410,590,25);
+  ctx.lineTo(490,590); ctx.arcTo(520,590,520,560,25);
+  ctx.lineTo(520,500);
+  ctx.stroke();
+  // Inner highlight
+  ctx.strokeStyle='rgba(255,220,180,0.25)'; ctx.lineWidth=8;
+  ctx.stroke();
+  ctx.restore();
+  // Rectum
+  drawTube(450,590,450,635,14,'#a0552d','#6b3010');
+  // Mouth (with animated chew)
+  ctx.save();
+  let chew=Math.abs(Math.sin(t*4))*8;
+  ctx.fillStyle='#ff6b9d';
+  ctx.beginPath(); ctx.ellipse(442,118,30,18+chew,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(432,112,5,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// Animated arrows
+function drawArrows(timeRatio){
+  function arrow(x1,y1,x2,y2,color,progress){
+    if(progress<=0) return;
+    let dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+    let px=x1+dx*Math.min(1,progress), py=y1+dy*Math.min(1,progress);
+    ctx.save();
+    ctx.strokeStyle=color; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.shadowColor=color; ctx.shadowBlur=12;
+    ctx.globalAlpha=0.85;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(px,py); ctx.stroke();
+    if(progress>=1){
+      let angle=Math.atan2(dy,dx);
+      ctx.fillStyle=color;
+      ctx.beginPath(); ctx.translate(x2,y2); ctx.rotate(angle);
+      ctx.moveTo(0,0); ctx.lineTo(-14,-7); ctx.lineTo(-14,7); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  let r=timeRatio;
+  arrow(442,137,442,200,COLORS.arrow1,Math.max(0,(r-0.05)*15));
+  arrow(450,270,450,310,COLORS.arrow2,Math.max(0,(r-0.18)*15));
+  arrow(450,370,430,415,COLORS.arrow3,Math.max(0,(r-0.35)*15));
+  arrow(410,490,400,505,'#ff6e40',Math.max(0,(r-0.55)*15));
+  arrow(450,600,450,620,'#ce93d8',Math.max(0,(r-0.75)*15));
+}
+
+function drawTitle(){
+  ctx.save();
+  let titleGrad=ctx.createLinearGradient(0,0,W,0);
+  titleGrad.addColorStop(0,'#ff9800'); titleGrad.addColorStop(0.5,'#ffeb3b'); titleGrad.addColorStop(1,'#ff6b9d');
+  ctx.font='bold 34px Segoe UI';
+  ctx.textAlign='center';
+  ctx.shadowColor='#ff9800'; ctx.shadowBlur=25;
+  ctx.fillStyle=titleGrad;
+  ctx.fillText('🍎 DIGESTIVE SYSTEM JOURNEY 🍽️',W/2,48);
+  ctx.font='16px Segoe UI'; ctx.fillStyle='rgba(255,220,180,0.8)'; ctx.shadowBlur=0;
+  ctx.fillText('FOR DEAF STUDENTS — Visual Learning Animation',W/2,72);
+  ctx.restore();
+}
+
+function drawStepPanel(timeRatio){
+  // Side panel progress tracker
+  ctx.save();
+  ctx.globalAlpha=0.9;
+  let panelX=20,panelY=100,panelW=155,panelH=480;
+  let bg=ctx.createLinearGradient(panelX,panelY,panelX,panelY+panelH);
+  bg.addColorStop(0,'rgba(30,5,60,0.95)');
+  bg.addColorStop(1,'rgba(20,5,40,0.95)');
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.roundRect(panelX,panelY,panelW,panelH,14); ctx.fill();
+  ctx.strokeStyle='rgba(255,150,60,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+  STEPS.forEach((s,i)=>{
+    let complete=timeRatio>(i/STEPS.length+0.04);
+    let active=timeRatio>=(i/STEPS.length) && !complete;
+    let sy=panelY+30+i*63;
+    // Circle indicator
+    ctx.beginPath(); ctx.arc(panelX+18,sy,10,0,Math.PI*2);
+    ctx.fillStyle=complete?s.color:(active?s.color:'rgba(255,255,255,0.15)');
+    ctx.shadowColor=s.color; ctx.shadowBlur=complete||active?15:0;
+    ctx.fill();
+    if(complete||active){ ctx.fillStyle='#000'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center'; ctx.fillText('✓',panelX+18,sy+4); }
+    ctx.shadowBlur=0;
+    ctx.fillStyle=complete||active?'#fff':'rgba(255,255,255,0.35)';
+    ctx.font=`${complete||active?'bold 11px':'10px'} Segoe UI`; ctx.textAlign='left';
+    ctx.fillText(s.name.replace(/[①-⑦]/,'').trim(),panelX+34,sy-4);
+    ctx.font='9px Segoe UI'; ctx.fillStyle=complete||active?s.color:'rgba(255,255,255,0.25)';
+    ctx.fillText(s.sub,panelX+34,sy+10);
+  });
+  ctx.restore();
+}
+
+function drawEmojiLabels(timeRatio){
+  const emojis=['👄','🫁','🫃','🦠','💧','💩','🚽'];
+  const positions=[{x:490,y:118},{x:580,y:185},{x:580,y:330},{x:230,y:400},{x:650,y:535},{x:540,y:555},{x:440,y:650}];
+  STEPS.forEach((s,i)=>{
+    let alpha=Math.max(0,Math.min(1,(timeRatio-(i/STEPS.length))*8));
+    if(alpha<=0) return;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.font='24px serif';
+    ctx.textAlign='center';
+    ctx.shadowColor=s.color; ctx.shadowBlur=15;
+    ctx.fillText(emojis[i],positions[i].x,positions[i].y);
+    ctx.shadowBlur=0;
+    ctx.font='bold 13px Segoe UI'; ctx.fillStyle=s.color;
+    ctx.fillText(s.name,positions[i].x,positions[i].y+22);
+    ctx.font='10px Segoe UI'; ctx.fillStyle='rgba(255,255,255,0.75)';
+    ctx.fillText(s.sub,positions[i].x,positions[i].y+36);
+    ctx.restore();
+  });
+}
+
+function loop(){
+  t+=0.016; frame++;
+  let cycleT=(t%CYCLE)/CYCLE;
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  drawTitle();
+  drawBody();
+  drawOrgans(cycleT);
+  drawArrows(cycleT);
+  // Update food boli
+  spawnBolusIfNeeded();
+  boli.forEach(b=>{b.update();b.draw();});
+  // Particles
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.update();p.draw();});
+  drawStepPanel(cycleT);
+  drawEmojiLabels(cycleT);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

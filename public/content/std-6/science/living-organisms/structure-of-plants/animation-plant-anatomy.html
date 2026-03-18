@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Structure - Silent Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135degree, #2E7D32 0%, #66BB6A 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            background: linear-gradient(to bottom, #E8F5E9 0%, #C8E6C9 100%);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #1B5E20;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+            z-index: 200;
+        }
+
+        .label {
+            position: absolute;
+            font-size: 22px;
+            font-weight: bold;
+            background: white;
+            padding: 10px 18px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 3px solid #4CAF50;
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 150;
+        }
+
+        .label.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #label1 {
+            top: 80px;
+            left: 80px;
+            color: #8D6E63;
+        }
+
+        #label2 {
+            top: 300px;
+            left: 100px;
+            color: #558B2F;
+        }
+
+        #label3 {
+            top: 150px;
+            right: 100px;
+            color: #2E7D32;
+        }
+
+        #label4 {
+            bottom: 100px;
+            right: 100px;
+            color: #F57C00;
+        }
+
+        .plant-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 600px;
+        }
+
+        .root {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 180px;
+        }
+
+        .root-branch {
+            position: absolute;
+            width: 8px;
+            background: linear-gradient(to bottom, #6D4C41, #4E342E);
+            border-radius: 4px;
+            animation: rootGrow 3s ease-out forwards;
+        }
+
+        @keyframes rootGrow {
+            from {
+                height: 0;
+                opacity: 0;
+            }
+
+            to {
+                height: var(--height);
+                opacity: 1;
+            }
+        }
+
+        .stem {
+            position: absolute;
+            bottom: 170px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 280px;
+            background: linear-gradient(to right, #33691E, #558B2F, #7CB342);
+            border-radius: 10px;
+            box-shadow: inset -2px 0 5px rgba(0, 0, 0, 0.2);
+            animation: stemGrow 2s ease-out forwards;
+        }
+
+        @keyframes stemGrow {
+            from {
+                height: 0;
+            }
+
+            to {
+                height: 280px;
+            }
+        }
+
+        .leaf {
+            position: absolute;
+            width: 120px;
+            height: 70px;
+            background: radial-gradient(ellipse, #66BB6A, #388E3C);
+            border-radius: 0 100% 0 100%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: leafGrow 1.5s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes leafGrow {
+            from {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(var(--rotate));
+                opacity: 1;
+            }
+        }
+
+        .flower {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: flowerBloom 2s ease-out 3s forwards;
+            opacity: 0;
+        }
+
+        @keyframes flowerBloom {
+            from {
+                transform: translateX(-50%) scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .petal {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background: radial-gradient(ellipse, #FF4081, #E91E63);
+            border-radius: 50% 50% 50% 0;
+            transform-origin: bottom center;
+        }
+
+        .cell-view {
+            position: absolute;
+            top: 120px;
+            right: 50px;
+            width: 180px;
+            height: 180px;
+            background: white;
+            border: 4px solid #4CAF50;
+            border-radius: 20px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            animation: cellAppear 1s ease 5s forwards;
+        }
+
+        @keyframes cellAppear {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .cell-wall {
+            position: absolute;
+            inset: 10px;
+            border: 3px solid #8BC34A;
+            border-radius: 10px;
+        }
+
+        .chloroplast {
+            position: absolute;
+            width: 30px;
+            height: 20px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .nucleus {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #FF6F00, #E65100);
+            border-radius: 50%;
+        }
+
+        .vacuole {
+            position: absolute;
+            width: 60px;
+            height: 50px;
+            background: rgba(33, 150, 243, 0.3);
+            border: 2px solid #2196F3;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="animation-container">
+        <div class="title">🌿 STRUCTURE OF PLANTS 🌿</div>
+
+        <div id="label1" class="label">🌱 ROOTS<br>Absorb water & minerals</div>
+        <div id="label2" class="label">🍃 STEM<br>Transports nutrients</div>
+        <div id="label3" class="label">🌾 LEAVES<br>Make food (photosynthesis)</div>
+        <div id="label4" class="label">🌸 FLOWER<br>Reproduction</div>
+
+        <div class="plant-container">
+            <div class="root" id="root-system"></div>
+            <div class="stem"></div>
+            <div id="leaves"></div>
+            <div class="flower" id="flower"></div>
+        </div>
+
+        <div class="cell-view">
+            <div
+                style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); font-weight: bold; color: #1B5E20; font-size: 14px;">
+                Plant Cell</div>
+            <div class="cell-wall"></div>
+            <div class="nucleus"></div>
+            <div id="chloroplasts"></div>
+            <div class="vacuole" style="bottom: 20px; right: 20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const labels = ['label1', 'label2', 'label3', 'label4'];
+
+        // Create roots
+        const rootSystem = document.getElementById('root-system');
+        const rootPositions = [
+            { left: '50%', height: 100, delay: 0 },
+            { left: '30%', height: 80, delay: 0.2 },
+            { left: '70%', height: 90, delay: 0.3 },
+            { left: '20%', height: 60, delay: 0.5 },
+            { left: '80%', height: 70, delay: 0.4 }
+        ];
+        rootPositions.forEach(pos => {
+            const root = document.createElement('div');
+            root.className = 'root-branch';
+            root.style.left = pos.left;
+            root.style.bottom = '0';
+            root.style.setProperty('--height', pos.height + 'px');
+            root.style.animationDelay = pos.delay + 's';
+            rootSystem.appendChild(root);
+        });
+
+        // Create leaves
+        const leavesContainer = document.getElementById('leaves');
+        const leafPositions = [
+            { top: 200, left: -60, rotate: '-30deg', delay: 2 },
+            { top: 200, right: -60, rotate: '30deg', delay: 2.2 },
+            { top: 250, left: -70, rotate: '-40deg', delay: 2.4 },
+            { top: 250, right: -70, rotate: '40deg', delay: 2.6 },
+            { top: 300, left: -65, rotate: '-35deg', delay: 2.8 },
+            { top: 300, right: -65, rotate: '35deg', delay: 3 }
+        ];
+        leafPositions.forEach(pos => {
+            const leaf = document.createElement('div');
+            leaf.className = 'leaf';
+            leaf.style.top = pos.top + 'px';
+            if (pos.left) leaf.style.left = pos.left + 'px';
+            if (pos.right) leaf.style.right = pos.right + 'px';
+            leaf.style.setProperty('--rotate', pos.rotate);
+            leaf.style.animationDelay = pos.delay + 's';
+            leavesContainer.appendChild(leaf);
+        });
+
+        // Create flower petals
+        const flower = document.getElementById('flower');
+        for (let i = 0; i < 6; i++) {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            petal.style.transform = `rotate(${i * 60}deg) translateY(-30px)`;
+            flower.appendChild(petal);
+        }
+        const center = document.createElement('div');
+        center.style.cssText = 'position: absolute; width: 30px; height: 30px; background: #FFC107; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);';
+        flower.appendChild(center);
+
+        // Create chloroplasts
+        const chloroplastsContainer = document.getElementById('chloroplasts');
+        const chloroPositions = [{ top: 30, left: 30 }, { top: 50, right: 40 }, { bottom: 50, left: 40 }];
+        chloroPositions.forEach((pos, i) => {
+            const chloro = document.createElement('div');
+            chloro.className = 'chloroplast';
+            Object.assign(chloro.style, pos);
+            chloro.style.animationDelay = i * 0.3 + 's';
+            chloroplastsContainer.appendChild(chloro);
+        });
+
+        // Animate labels
+        function animateLabels() {
+            const timings = [1000, 2500, 4000, 5500];
+            labels.forEach((id, i) => {
+                setTimeout(() => document.getElementById(id).classList.add('active'), timings[i]);
+            });
+        }
+
+        animateLabels();
+        setInterval(() => {
+            labels.forEach(id => document.getElementById(id).classList.remove('active'));
+            animateLabels();
+        }, 15000);
+    </script>
+</body>
+
+</html>
