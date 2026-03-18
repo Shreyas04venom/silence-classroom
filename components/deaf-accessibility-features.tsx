@@ -83,11 +83,11 @@ export function DeafAccessibilityFeatures({
 
           return hasValidSignSVG ? (
             <div className="space-y-4">
-              <div className="bg-white p-6 rounded-lg border border-border flex justify-center items-center min-h-[200px]">
+              <div className="bg-white p-6 rounded-lg border border-border flex justify-center items-center min-h-[250px]">
                 {/* Safe render of SVG since it comes from our AI prompt instructions */}
-                <div dangerouslySetInnerHTML={{ __html: signLanguageSVG }} className="w-full max-w-sm flex justify-center" />
+                <div dangerouslySetInnerHTML={{ __html: signLanguageSVG }} className="w-full max-w-2xl flex justify-center" />
               </div>
-              <p className="text-center text-sm text-muted-foreground">AI-Generated Visual SVG representation of the sign for &quot;{topic}&quot;</p>
+              <p className="text-center text-sm text-muted-foreground">Step-by-step ASL sign language guide for &quot;{topic}&quot;</p>
             </div>
           ) : (
             /* Fallback: show a beautiful styled card explaining the sign concept */
@@ -96,7 +96,7 @@ export function DeafAccessibilityFeatures({
                 <div className="text-6xl">👋</div>
                 <div className="text-center">
                   <h3 className="font-bold text-lg text-amber-900 mb-1">Sign Language: {topic}</h3>
-                  <p className="text-sm text-amber-700">ISL (Indian Sign Language) Reference</p>
+                  <p className="text-sm text-amber-700">ASL (American Sign Language) Reference</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 w-full border border-amber-200 shadow-sm">
                   <p className="text-sm text-amber-800 text-center font-medium mb-3">🤟 How to sign <strong>{topic}</strong>:</p>

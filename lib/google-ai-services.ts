@@ -22,6 +22,13 @@ export async function generateEducationalContent(
   standard: string,
   subject: string,
 ): Promise<GeneratedContent> {
+  // Build context string — handle empty values from VIC mode gracefully
+  const contextParts = []
+  if (standard) contextParts.push(`Standard ${standard}`)
+  if (subject) contextParts.push(`Subject: ${subject}`)
+  if (chapter) contextParts.push(`Chapter: ${chapter}`)
+  const contextStr = contextParts.length > 0 ? ` (${contextParts.join(", ")})` : ""
+
   const prompt = `You are an expert scientific educator and SVG artist creating visual content for deaf students.
 Generate ONLY valid JSON (no markdown, no code blocks). All SVG fields MUST contain REAL, VISIBLE, DRAWN SVG —
 NOT empty tags and NOT text descriptions of what you would draw.
@@ -29,45 +36,61 @@ NOT empty tags and NOT text descriptions of what you would draw.
 CRITICAL RULES:
 - detailedIllustrationSVG: Draw a REAL educational diagram with colored shapes, arrows, and text labels.
   Use <rect>, <circle>, <path>, <line>, <text>, <polygon> elements. Min 600 chars.
-- signLanguageSVG: Draw a REAL hand/gesture using SVG ellipses and rects for palm and fingers.
-  Include the topic name as a label. Show the concept with an emoji and colored boxes.
+  The diagram MUST illustrate "${topic}" specifically — show the actual parts, processes, or concepts involved.
+- signLanguageSVG: Create a UNIQUE visual sign language guide SPECIFICALLY for "${topic}".
+  It MUST show how to sign THIS EXACT TOPIC — not a generic hand gesture.
+  Include multiple hand positions showing the signing process step by step.
 - Do NOT return empty SVG like <svg></svg>. Do NOT return text descriptions.
-- animationCode: Simple self-contained HTML with inline CSS animation.
+- animationCode: Create a REAL interactive HTML animation with Canvas or CSS animations showing "${topic}".
 
-For detailedIllustrationSVG, follow this structure:
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
-  <rect width="800" height="500" fill="#f0f9ff"/>
-  <text x="400" y="40" text-anchor="middle" font-size="24" font-weight="bold" fill="#1e3a5f">TOPIC_TITLE</text>
-  <rect x="50" y="70" width="180" height="90" rx="12" fill="#4fc3f7" stroke="#0288d1" stroke-width="2"/>
-  <text x="140" y="120" text-anchor="middle" font-size="15" fill="white">Part Name</text>
-  <line x1="230" y1="115" x2="320" y2="115" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
-  <defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#333"/></marker></defs>
-</svg>
+=== DETAILED ILLUSTRATION SVG ===
+Create a professional educational diagram for "${topic}" with:
+- Proper title showing "${topic}" at the top
+- Multiple colored shapes representing the key parts/concepts
+- Labeled arrows showing flow/relationships
+- At least 5-8 distinct visual elements with text labels
+- Professional color scheme (blues, greens, oranges — not plain primary colors)
+- Use gradient fills, rounded corners, proper spacing
+- Min viewBox: 0 0 800 500
 
-For signLanguageSVG, draw a hand gesture:
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 340" width="280" height="340">
-  <rect width="280" height="340" fill="#fef3c7" rx="16"/>
-  <text x="140" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#92400e">TOPIC_TITLE</text>
-  <ellipse cx="140" cy="210" rx="52" ry="65" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
-  <rect x="82" y="125" width="20" height="65" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
-  <rect x="106" y="105" width="20" height="80" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
-  <rect x="130" y="100" width="20" height="85" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
-  <rect x="154" y="110" width="20" height="75" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
-  <ellipse cx="74" cy="182" rx="15" ry="28" fill="#fde68a" stroke="#d97706" stroke-width="2" transform="rotate(-25 74 182)"/>
-  <rect x="60" y="290" width="160" height="36" rx="8" fill="#fbbf24"/>
-  <text x="140" y="313" text-anchor="middle" font-size="12" fill="#78350f">👋 Sign: TOPIC_TITLE</text>
-</svg>
+=== SIGN LANGUAGE SVG — CRITICAL: MUST BE SPECIFIC TO "${topic}" ===
+Create a step-by-step ASL (American Sign Language) guide showing how to sign "${topic}".
+The SVG MUST include:
+1. Title: "How to Sign: ${topic}" at the top
+2. 3-4 numbered steps, each showing a DIFFERENT hand position/movement
+3. Each step has: a hand illustration (using ellipses for palm, rects for fingers), 
+   a step number circle, and a descriptive label (e.g., "Step 1: Open palm facing forward")
+4. Arrows between steps showing the signing sequence
+5. The hand positions MUST be DIFFERENT for each step (different finger angles, palm orientations)
+6. At the bottom: the word "${topic}" with a description of the complete sign
 
-Generate for topic: "${topic}" (Standard ${standard}, Subject: ${subject}, Chapter: ${chapter})
+Structure (viewBox 0 0 700 400):
+- Background: warm gradient (#fef3c7 to #fde68a)
+- Title bar at top with topic name
+- 3-4 columns, each with a numbered step showing a unique hand position
+- Flow arrows between steps
+- Bottom summary bar
+
+=== ANIMATION CODE ===
+Create a self-contained HTML animation for "${topic}" using Canvas or CSS:
+- Must be a complete working HTML snippet (can include <style>, <canvas>, <script>)
+- Show the educational concept visually with smooth animations
+- Include a title, moving/transforming elements, color transitions
+- Should run in a loop and be visually engaging
+- Use requestAnimationFrame for smooth 60fps animation
+- Include visual labels and stage indicators
+- Must be at least 2000 characters of real animation code (not a placeholder div!)
+
+Generate for topic: "${topic}"${contextStr}
 
 Return ONLY this JSON object:
 {
-  "explanation": "2-3 clear paragraphs explaining ${topic} for deaf students with visual descriptions.",
-  "imagePrompt": "Educational diagram of ${topic} with labeled parts.",
-  "detailedIllustrationSVG": "<svg xmlns=...>COMPLETE REAL DRAWN DIAGRAM for ${topic} with colors, labels, arrows</svg>",
-  "animationCode": "<div style='padding:20px;background:#1a1a2e;color:white;border-radius:12px;font-family:sans-serif'><h2 style='color:#4fc3f7'>${topic}</h2><p>Key concept animation here</p></div>",
-  "signLanguageSVG": "<svg xmlns=...>COMPLETE REAL HAND GESTURE DRAWING with label for ${topic}</svg>",
-  "visualTranscript": "Step 1: [what student sees first]\nStep 2: [next visual element]\nStep 3: [key concept shown visually]"
+  "explanation": "3-4 detailed paragraphs explaining ${topic} for deaf students with vivid visual descriptions. Include step-by-step breakdown, real-world examples, and key takeaways.",
+  "imagePrompt": "Professional educational diagram of ${topic} with labeled parts, arrows, and color coding.",
+  "detailedIllustrationSVG": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'>COMPLETE REAL DRAWN DIAGRAM for ${topic} with multiple shapes, colors, labels, arrows showing the actual concept</svg>",
+  "animationCode": "<div>COMPLETE WORKING HTML/CSS/JS ANIMATION showing ${topic} with Canvas or CSS animations, at least 2000 chars</div>",
+  "signLanguageSVG": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 400'>STEP-BY-STEP ASL SIGN GUIDE specifically for ${topic} with 3-4 different hand positions, numbered steps, and flow arrows</svg>",
+  "visualTranscript": "0:00 - Title '${topic}' appears with visual emphasis\\n0:03 - [First key visual element appears]\\n0:06 - [Second visual element with description]\\n0:09 - [Process/relationship shown]\\n0:12 - [Key concept highlighted]\\n0:15 - Summary visual with key takeaways"
 }`
 
   let lastError: any
