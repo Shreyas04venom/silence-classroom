@@ -37,20 +37,23 @@ CRITICAL RULES:
 - detailedIllustrationSVG: Draw a REAL educational diagram with colored shapes, arrows, and text labels.
   Use <rect>, <circle>, <path>, <line>, <text>, <polygon> elements. Min 600 chars.
   The diagram MUST illustrate "${topic}" specifically — show the actual parts, processes, or concepts involved.
+  TEXT OVERLAP PREVENTION: Ensure all <text> elements are spaced far apart. Use text-shadow or white backgrounds for labels to ensure readability. Place labels strategically so they NEVER overlap with lines or other shapes.
 - signLanguageSVG: Create a UNIQUE visual sign language guide SPECIFICALLY for "${topic}".
   It MUST show how to sign THIS EXACT TOPIC — not a generic hand gesture.
   Include multiple hand positions showing the signing process step by step.
+  NUMBERS & LABELS: Ensure step numbers and hand labels are clearly separated and don't overlap with the hand drawings.
 - Do NOT return empty SVG like <svg></svg>. Do NOT return text descriptions.
 - animationCode: Create a REAL interactive HTML animation with Canvas or CSS animations showing "${topic}".
+  VISUAL CLARITY: Ensure any moving labels have a fixed position or enough padding to NEVER overlap with the animated subject. Use high contrast colors.
 
 === DETAILED ILLUSTRATION SVG ===
 Create a professional educational diagram for "${topic}" with:
-- Proper title showing "${topic}" at the top
-- Multiple colored shapes representing the key parts/concepts
-- Labeled arrows showing flow/relationships
+- Proper title showing "${topic}" at the top (centered, font-size 24px)
+- Multiple colored shapes representing the key parts/concepts (use rounded corners, rx="8")
+- Labeled arrows showing flow/relationships (use marker-end for clear arrows)
 - At least 5-8 distinct visual elements with text labels
+- VISUAL ACCURACY: Place labels next to elements, not on top of them. Use a small white <rect> behind text if it's over a busy background.
 - Professional color scheme (blues, greens, oranges — not plain primary colors)
-- Use gradient fills, rounded corners, proper spacing
 - Min viewBox: 0 0 800 500
 
 === SIGN LANGUAGE SVG — CRITICAL: MUST BE SPECIFIC TO "${topic}" ===
@@ -61,7 +64,7 @@ The SVG MUST include:
 3. Each step has: a hand illustration (using ellipses for palm, rects for fingers), 
    a step number circle, and a descriptive label (e.g., "Step 1: Open palm facing forward")
 4. Arrows between steps showing the signing sequence
-5. The hand positions MUST be DIFFERENT for each step (different finger angles, palm orientations)
+5. NO OVERLAP: Ensure hand positions are in a clean grid (e.g., Column 1, Column 2, etc.) so they don't overlap.
 6. At the bottom: the word "${topic}" with a description of the complete sign
 
 Structure (viewBox 0 0 700 400):
@@ -75,10 +78,10 @@ Structure (viewBox 0 0 700 400):
 Create a self-contained HTML animation for "${topic}" using Canvas or CSS:
 - Must be a complete working HTML snippet (can include <style>, <canvas>, <script>)
 - Show the educational concept visually with smooth animations
+- LABEL PLACEMENT: If using labels in animation, place them in a dedicated 'sidebar' area or at the bottom to avoid overlapping with the moving parts.
 - Include a title, moving/transforming elements, color transitions
 - Should run in a loop and be visually engaging
 - Use requestAnimationFrame for smooth 60fps animation
-- Include visual labels and stage indicators
 - Must be at least 2000 characters of real animation code (not a placeholder div!)
 
 Generate for topic: "${topic}"${contextStr}

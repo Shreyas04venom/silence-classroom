@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { getAllSessions, getSession, VICSession, formatDuration, searchSessions } from "@/lib/session-storage"
-import { Clock, Search, Play, X, BookOpen } from "lucide-react"
+import { getAllSessions, getSession, VICSession, formatDuration, searchSessions, deleteSession } from "@/lib/session-storage"
+import { Clock, Search, Play, X, BookOpen, Trash2 } from "lucide-react"
+import { DeafAccessibilityFeatures } from "@/components/deaf-accessibility-features"
 
 interface StudentDashboardProps {
     onClose: () => void
+    isTeacher?: boolean
 }
 
-export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
+export function VICStudentDashboard({ onClose, isTeacher = false }: StudentDashboardProps) {
     const [sessions, setSessions] = useState<VICSession[]>([])
     const [selectedSession, setSelectedSession] = useState<VICSession | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -26,7 +28,11 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
 
     const loadSessions = () => {
         const allSessions = getAllSessions()
-        setSessions(allSessions)
+        // Defensive deduplication to prevent key errors in UI
+        const uniqueSessions = allSessions.filter((session, index, self) =>
+            index === self.findIndex((s) => s.id === session.id)
+        )
+        setSessions(uniqueSessions)
     }
 
     const handleSearch = (query: string) => {
@@ -47,6 +53,17 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
 
     const handleBack = () => {
         setSelectedSession(null)
+    }
+
+    const handleDeleteSession = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation()
+        if (confirm("Are you sure you want to delete this session?")) {
+            deleteSession(id)
+            if (selectedSession?.id === id) {
+                setSelectedSession(null)
+            }
+            loadSessions()
+        }
     }
 
     return (
@@ -124,10 +141,23 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
                                                     </Badge>
                                                 </div>
                                             </div>
-                                            <Button size="sm" className="gap-2 flex-shrink-0">
-                                                <Play className="w-4 h-4" />
-                                                View
-                                            </Button>
+                                            <div className="flex flex-col gap-2 flex-shrink-0">
+                                                <Button size="sm" className="gap-2">
+                                                    <Play className="w-4 h-4" />
+                                                    View
+                                                </Button>
+                                                {isTeacher && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        onClick={(e) => handleDeleteSession(e, session.id)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Delete
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -192,12 +222,18 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
                         {activeTab === "explanation" && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Explanation & Translations</CardTitle>
+                                    <CardTitle>Lesson Explanation</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
+                                    <div className="prose dark:prose-invert max-w-none">
+                                        <div className="space-y-4 text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                                            {selectedSession.explanation || selectedSession.transcript}
+                                        </div>
+                                    </div>
+                                    
                                     {/* Multi-language Translations */}
-                                    {Object.keys(selectedSession.translations).length > 0 && (
-                                        <div className="space-y-3">
+                                    {selectedSession.translations && Object.keys(selectedSession.translations).length > 0 && (
+                                        <div className="space-y-3 pt-6 border-t font-semibold text-sm">
                                             <h4 className="font-semibold text-sm">Available Translations:</h4>
                                             {Object.entries(selectedSession.translations).map(([lang, text]) => (
                                                 <details key={lang} className="bg-muted p-3 rounded-lg">
@@ -217,45 +253,90 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
                         )}
 
                         {/* Images Tab */}
-                        {activeTab === "images" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Generated Images</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {selectedSession.images.length > 0 ? (
-                                        <div className="grid gap-4">
-                                            {selectedSession.images.map((img, idx) => (
-                                                <div key={idx} className="p-4 bg-muted rounded-lg">
-                                                    <Badge className="mb-2">Image {idx + 1}</Badge>
-                                                    <p className="text-sm">{img}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-center py-8 text-muted-foreground">No images in this session</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                        {activeTab === "images" && (() => {
+                            const hasStaticImage = selectedSession.imageUrl && selectedSession.imageUrl.startsWith('/content/')
+                            const hasRealSVG = !hasStaticImage && selectedSession.detailedIllustrationSVG &&
+                                selectedSession.detailedIllustrationSVG.trim().startsWith('<') &&
+                                (selectedSession.detailedIllustrationSVG.includes('<rect') || selectedSession.detailedIllustrationSVG.includes('<circle') ||
+                                    selectedSession.detailedIllustrationSVG.includes('<path') || selectedSession.detailedIllustrationSVG.includes('<ellipse') ||
+                                    selectedSession.detailedIllustrationSVG.includes('<polygon')) &&
+                                selectedSession.detailedIllustrationSVG.length > 200
+
+                            return (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Visual Resources</CardTitle>
+                                        <CardDescription>Generated educational images and diagrams</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {hasStaticImage ? (
+                                            <div className="space-y-4">
+                                                <img
+                                                    src={selectedSession.imageUrl!}
+                                                    alt={selectedSession.metadata.topic || "Lesson visual"}
+                                                    className="w-full rounded-lg border shadow-inner object-contain bg-white"
+                                                    style={{ maxHeight: '600px' }}
+                                                />
+                                            </div>
+                                        ) : hasRealSVG ? (
+                                            <div className="space-y-4">
+                                                <div
+                                                    className="w-full rounded-lg overflow-hidden bg-white border shadow-inner flex items-center justify-center p-4"
+                                                    style={{ minHeight: '400px' }}
+                                                    dangerouslySetInnerHTML={{ __html: selectedSession.detailedIllustrationSVG! }}
+                                                />
+                                            </div>
+                                        ) : selectedSession.images.length > 0 ? (
+                                            <div className="grid gap-4">
+                                                {selectedSession.images.map((img, idx) => (
+                                                    <div key={idx} className="p-4 bg-muted rounded-lg">
+                                                        <Badge className="mb-2">Reference {idx + 1}</Badge>
+                                                        <p className="text-sm">{img}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-center py-8 text-muted-foreground">No visual resources in this session</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )
+                        })()}
 
                         {/* Videos Tab */}
                         {activeTab === "videos" && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Generated Animations</CardTitle>
+                                    <CardTitle>Educational Animations</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    {selectedSession.animations.length > 0 ? (
+                                    {selectedSession.animationUrl ? (
                                         <div className="space-y-4">
-                                            {selectedSession.animations.map((animCode, idx) => (
+                                            <div className="relative w-full rounded-lg overflow-hidden bg-black border shadow-inner" style={{ paddingBottom: '75.56%' }}>
+                                                <iframe
+                                                    src={selectedSession.animationUrl}
+                                                    className="absolute inset-0 w-full h-full border-0"
+                                                    title="Lesson Animation"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : selectedSession.animationCode || (selectedSession.animations && selectedSession.animations.length > 0) ? (
+                                        <div className="space-y-4">
+                                            {(selectedSession.animationCode ? [selectedSession.animationCode] : selectedSession.animations || []).map((animCode, idx) => (
                                                 <div key={idx} className="border rounded-lg overflow-hidden">
-                                                    <div className="bg-muted p-2">
-                                                        <Badge>Animation {idx + 1}</Badge>
-                                                    </div>
                                                     <div className="relative w-full aspect-video bg-white">
                                                         <iframe
-                                                            srcDoc={animCode}
+                                                            srcDoc={animCode.includes('<html>') ? animCode : `
+                                                                <html>
+                                                                <head>
+                                                                    <style>body { margin: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }</style>
+                                                                </head>
+                                                                <body>
+                                                                    ${animCode}
+                                                                </body>
+                                                                </html>
+                                                            `}
                                                             className="w-full h-full border-0"
                                                             title={`Animation ${idx + 1}`}
                                                             sandbox="allow-scripts"
@@ -273,46 +354,11 @@ export function VICStudentDashboard({ onClose }: StudentDashboardProps) {
 
                         {/* Accessibility Tab */}
                         {activeTab === "accessibility" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Accessibility Features</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    {/* Visual Transcript */}
-                                    <div>
-                                        <h4 className="font-semibold mb-3">
-                                            <Badge>Visual Transcript</Badge>
-                                        </h4>
-                                        <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-sm">
-                                            {selectedSession.accessibility.visualTranscript || "No visual transcript available"}
-                                        </div>
-                                    </div>
-
-                                    {/* Sign Language */}
-                                    <div>
-                                        <h4 className="font-semibold mb-3">
-                                            <Badge>Sign Language Mode</Badge>
-                                        </h4>
-                                        {selectedSession.accessibility.signLanguageData.length > 0 ? (
-                                            <div className="grid gap-3">
-                                                {selectedSession.accessibility.signLanguageData.map((sign: any, idx: number) => (
-                                                    <div key={idx} className="bg-muted p-3 rounded-lg flex items-start gap-3">
-                                                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                                                            <span className="text-xs font-bold">{sign.time}s</span>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium">{sign.sign}</p>
-                                                            <p className="text-sm text-muted-foreground">{sign.description}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-muted-foreground text-sm">No sign language data available</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <DeafAccessibilityFeatures
+                                topic={selectedSession.metadata.topic || selectedSession.title}
+                                signLanguageSVG={selectedSession.signLanguageSVG || ""}
+                                visualTranscript={selectedSession.accessibility.visualTranscript || ""}
+                            />
                         )}
                     </div>
                 </div>

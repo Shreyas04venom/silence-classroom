@@ -16,10 +16,13 @@ import {
     Loader2,
     CheckCircle2,
     Send,
+    History,
 } from "lucide-react"
+import { VICStudentDashboard } from "./vic-student-dashboard"
 import { speechRecognition } from "@/lib/speech-recognition"
 import { saveSession, generateSessionId, VICSession } from "@/lib/session-storage"
 import { DeafAccessibilityFeatures } from "@/components/deaf-accessibility-features"
+import { saveSessionToSupabase } from "@/lib/supabase-services"
 
 interface TeacherDashboardProps {
     onClose: () => void
@@ -33,6 +36,7 @@ export function VICTeacherDashboard({ onClose }: TeacherDashboardProps) {
     const [activeTab, setActiveTab] = useState<"explanation" | "images" | "videos" | "accessibility">(
         "explanation"
     )
+    const [isViewingSessions, setIsViewingSessions] = useState(false)
 
     // Generated content (matching generate-content API response shape)
     const [explanation, setExplanation] = useState<string | null>(null)
@@ -125,17 +129,34 @@ export function VICTeacherDashboard({ onClose }: TeacherDashboardProps) {
             translations: {},
             images: imageUrl ? [imageUrl] : [],
             animations: animationCode ? [animationCode] : [],
+            // Save all generated content
+            explanation: explanation || undefined,
+            imageUrl: imageUrl || undefined,
+            detailedIllustrationSVG: detailedIllustrationSVG || undefined,
+            animationCode: animationCode || undefined,
+            animationUrl: animationUrl || undefined,
+            signLanguageSVG: signLanguageSVG || undefined,
             accessibility: {
                 visualTranscript: visualTranscript || "",
                 signLanguageData: [],
             },
             metadata: {
                 teacher: "Demo Teacher",
+                topic: transcript.trim().split(/\s+/).slice(0, 5).join(" "),
             },
         }
 
         saveSession(session)
-        alert("Session saved successfully!")
+        alert("Session saved locally. Syncing to cloud...")
+        
+        // Sync to Supabase in the background
+        saveSessionToSupabase(session).then((success) => {
+            if (success) {
+                console.log("Successfully synced session to Supabase cloud.")
+            } else {
+                console.error("Failed to sync session to cloud database.")
+            }
+        })
     }
 
     // Single unified API call — same endpoint as "Generate Educational Content" button
@@ -213,6 +234,15 @@ export function VICTeacherDashboard({ onClose }: TeacherDashboardProps) {
     }
 
     const conceptText = transcript.trim()
+
+    if (isViewingSessions) {
+        return (
+            <VICStudentDashboard 
+                isTeacher={true} 
+                onClose={() => setIsViewingSessions(false)} 
+            />
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -295,6 +325,24 @@ export function VICTeacherDashboard({ onClose }: TeacherDashboardProps) {
                         >
                             <Save className="w-5 h-5" />
                             Save Session
+                        </Button>
+                        <Button
+                            onClick={() => setIsViewingSessions(!isViewingSessions)}
+                            size="lg"
+                            variant="secondary"
+                            className="gap-2"
+                        >
+                            {isViewingSessions ? (
+                                <>
+                                    <Mic className="w-5 h-5" />
+                                    Back to Recording
+                                </>
+                            ) : (
+                                <>
+                                    <History className="w-5 h-5" />
+                                    Manage Saved Lessons
+                                </>
+                            )}
                         </Button>
                         <Button onClick={onClose} size="lg" variant="ghost">
                             Close VIC Mode

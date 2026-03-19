@@ -12,6 +12,13 @@ export interface VICSession {
     translations: Record<string, string>
     images: string[]
     animations: string[]
+    // Generated content fields
+    explanation?: string
+    imageUrl?: string
+    detailedIllustrationSVG?: string
+    animationCode?: string
+    animationUrl?: string
+    signLanguageSVG?: string
     accessibility: {
         visualTranscript: string
         signLanguageData: any[]
@@ -29,7 +36,10 @@ const MAX_SESSIONS = 50 // Keep last 50 sessions
 
 export function saveSession(session: VICSession): void {
     try {
-        const sessions = getAllSessions()
+        let sessions = getAllSessions()
+
+        // Remove existing session with same ID if it exists (prevent duplicates)
+        sessions = sessions.filter(s => s.id !== session.id)
 
         // Add new session at the beginning
         sessions.unshift(session)
