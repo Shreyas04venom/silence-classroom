@@ -28,10 +28,13 @@ export function VICStudentDashboard({ onClose, isTeacher = false }: StudentDashb
 
     const loadSessions = () => {
         const allSessions = getAllSessions()
-        // Defensive deduplication to prevent key errors in UI
-        const uniqueSessions = allSessions.filter((session, index, self) =>
-            index === self.findIndex((s) => s.id === session.id)
-        )
+        // Deduplicate by ID, keeping only first occurrence
+        const seen = new Set<string>()
+        const uniqueSessions = allSessions.filter((session) => {
+            if (seen.has(session.id)) return false
+            seen.add(session.id)
+            return true
+        })
         setSessions(uniqueSessions)
     }
 
@@ -117,9 +120,9 @@ export function VICStudentDashboard({ onClose, isTeacher = false }: StudentDashb
                         </Card>
                     ) : (
                         <div className="grid gap-4">
-                            {sessions.map((session) => (
+                            {sessions.map((session, index) => (
                                 <Card
-                                    key={session.id}
+                                    key={`${session.id}_${index}`}
                                     className="cursor-pointer hover:border-blue-500 hover:shadow-md transition-all"
                                     onClick={() => handleSelectSession(session.id)}
                                 >

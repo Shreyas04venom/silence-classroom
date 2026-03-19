@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { auth } from "@/lib/firebase"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -28,9 +29,12 @@ export function StudentDashboardContent({ profile, assignedLessons, stats }: Stu
   const [largeText, setLargeText] = useState(false)
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/")
+    try {
+      await auth.signOut()
+      router.push("/")
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
   }
 
   const toggleHighContrast = () => {

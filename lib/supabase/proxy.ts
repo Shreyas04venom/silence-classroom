@@ -29,26 +29,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes for teachers
-  if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
-  }
-
-  // Protected routes for students
-  if (request.nextUrl.pathname.startsWith("/student") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/student-login"
-    return NextResponse.redirect(url)
-  }
-
-  // Lesson display requires authentication
-  if (request.nextUrl.pathname.includes("/display") && !request.nextUrl.searchParams.get("kiosk") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
-  }
+  // NOTE: Route protection for /dashboard and /student/* has been moved to client-side
+  // Firebase auth checks inside each page component. Supabase middleware no longer
+  // handles those redirects.
 
   return supabaseResponse
+
 }

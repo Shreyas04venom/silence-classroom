@@ -1,10 +1,14 @@
+"use client"
 import type React from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Mic, Monitor, BarChart3, Eye, Hand, FlaskConical } from "lucide-react"
+import { BookOpen, Mic, Monitor, BarChart3, Eye, Hand, FlaskConical, Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
 
 export default function HomePage() {
+  const { resolvedTheme, setTheme } = useTheme()
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -17,12 +21,6 @@ export default function HomePage() {
             <span className="text-xl font-bold text-foreground">Silent Classrooms</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/demo-learn">
-              <Button variant="ghost" size="lg" className="text-base gap-2">
-                <FlaskConical className="h-4 w-4" />
-                Try Demo
-              </Button>
-            </Link>
             <Link href="/auth/login">
               <Button variant="ghost" size="lg" className="text-base">
                 Teacher Login
@@ -33,6 +31,14 @@ export default function HomePage() {
                 Student Login
               </Button>
             </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              aria-label="Toggle theme"
+            >
+              {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
           </nav>
         </div>
       </header>
